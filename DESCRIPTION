@@ -17,7 +17,13 @@ URL: https://github.com/mrajeev08/treerabid
 BugReports: https://github.com/mrajeev08/treerabid/issues
 Suggests: 
     knitr,
-    rmarkdown
+    rmarkdown,
+    ggraph,
+    ggplot2,
+    foreach,
+    doRNG,
+    igraph, 
+    parallel
 VignetteBuilder: knitr
 Imports: 
     data.table
