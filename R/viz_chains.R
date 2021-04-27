@@ -37,7 +37,7 @@ get_chain_stats <- function(gr) {
 
 #' Get membership (i.e. chain id) for each case
 #'
-#' @inheritParams get_chain_size
+#' @inheritParams get_chain_stats
 #'
 #' @return a data.table with id_case, membership, and t_days (time in days from
 #'  the start date, i.e. the earliest case in the transmission tree)
