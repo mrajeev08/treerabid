@@ -38,9 +38,13 @@ build_consensus_links <- function(all_links) {
 #' @export
 #'
 build_consensus_tree <- function(links_consensus, ttrees) {
+
+  sim_scores <- ttrees[links_consensus, on = c("id_case", "id_progen")][, score := 1][, .(score = sum(score)), by = "sim"]
+
   best_pairs <- paste0(links_consensus$id_case, "_", links_consensus$id_progen)
-  ttrees$score <- ifelse(paste0(ttrees$id_case, "_", ttrees$id_progen) %in% best_pairs, 1, 0)
-  sim_scores <- ttrees[, .(score = sum(score)), by = "sim"]
   tree_consensus <- ttrees[sim == sim_scores$sim[which.max(sim_scores$score)]]
-  return(ttrees)
+  tree_consensus[, score := fifelse(paste0(id_case, "_", id_progen) %in% best_pairs, 1, 0)]
+
+  return(tree_consensus)
 }
+
