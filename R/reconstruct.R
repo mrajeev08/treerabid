@@ -287,7 +287,7 @@ dist_gamma_mixed <- function(ttree, params, cutoff = NULL) {
   } else {
     # return the cutoff value given a prob (either length 1 or length of the ttree)
     ifelse(ttree$owned, qgamma(cutoff, shape = params$DK_shape, scale = params$DK_scale),
-           qgamma(cutoff, params$DK2_shape, scale = params$DK2_scale))
+           qgamma(cutoff, shape = params$DK2_shape, scale = params$DK2_scale))
   }
 }
 
