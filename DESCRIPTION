@@ -27,3 +27,5 @@ Suggests:
 VignetteBuilder: knitr
 Imports: 
     data.table
+Depends: 
+    R (>= 2.10)
