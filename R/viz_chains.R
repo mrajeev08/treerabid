@@ -66,7 +66,8 @@ get_chain_membership <- function(gr) {
 #'
 get_chain_persistence <- function(chain_membership) {
 
-  chain_pers <- chain_membership[, .(start_date = min(t), end_date = max(t)), by = "membership"]
+  chain_pers <- chain_membership[, .(start_date = min(t_days), end_date = max(t_days)),
+                                 by = "membership"]
   chain_pers[, days := end_date - start_date]
   return(chain_pers)
 }
