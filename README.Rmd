@@ -1,0 +1,268 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+```
+
+# treerabid
+
+*This is a work in progress that will break | change | may get rehomed!*
+
+`treerabid` reconstructs transmission trees using line list data--specifically in the 
+context of contact tracing data for canine rabies in Tanzania for the Hampson Lab. 
+
+Based on:
+- [Hampsone et al. 2009. Transmission Dynamics and Prospects for the Elimination of Canine Rabies.](https://journals.plos.org/plosbiology/article?id=10.1371/journal.pbio.1000053)
+- [Cori et al. 2019. A graph-based evidence synthesis approach to detecting outbreak clusters: An application to dog rabies.](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1006554)
+- Mancy et al. in prep.
+
+## Installation
+
+Install from github with:
+
+``` r
+# install.packages("devtools")
+devtools::install_github("mrajeev08/treerabid")
+```
+
+Dependencies: `data.table`,
+Suggests: `ggraph`, `ggplot2`, `igraph`, `foreach`, `doRNG`, `parallel`
+
+## Example using `treerabid` + `simrabid`
+
+```{r}
+# Dependencies for simrabid
+library(raster)
+library(data.table)
+library(sf)
+library(tidyr)
+library(dplyr)
+library(magrittr)
+library(ggplot2)
+library(fasterize)
+library(lubridate)
+
+# Additional dependencies for treerabid
+library(igraph)
+library(ggraph)
+library(foreach)
+library(doRNG)
+library(doParallel)
+
+# simrabid & treerabid
+library(simrabid) # devtools::install_github("mrajeev08/simrabid")
+library(treerabid)
+
+```
+
+
+First simulate from rabies IBM using `simrabid`:
+
+```{r sim}
+# set up 
+sd_shapefile <- st_read(system.file("extdata/sd_shapefile.shp", 
+                                    package = "simrabid"))
+
+# 1. set up the space at 1000 m resolution
+sd_shapefile$id_col <- 1:nrow(sd_shapefile)
+out <- setup_space(shapefile = sd_shapefile, resolution = 1000, id_col = "id_col", 
+                   use_fasterize = TRUE)
+pop_out <- out
+values(pop_out) <- rpois(ncell(pop_out), 20) # fake some population data
+pop_out[is.na(out)] <- NA
+plot(pop_out)
+
+# 2. set-up simulation framework 
+start_up <- setup_sim(start_date = "2002-01-01",
+                      apprx_end_date = "2012-01-01", # apprx 10 years
+                      days_in_step = 7, # weekly timestep
+                      rast = out, 
+                      death_rate_annual = 0.48, 
+                      birth_rate_annual = 0.52,
+                      waning_rate_annual = 1/3,
+                      params = list(start_pop = pop_out[]), 
+                      by_admin = FALSE)
+
+# 3. Simulate vaccination
+vacc_dt <- simrabid::sim_campaigns(locs = 1:75, campaign_prob = 0.7, 
+                                   coverage = 0.4, sim_years = 10, 
+                                   burn_in_years = 0,
+                                   steps_in_year = 52)
+
+# 4. Run the simulation
+# see ?simrabid for more details on function arguments
+system.time({
+  set.seed(1244)
+  exe <- simrabid(start_up, start_vacc = 0, I_seeds = 0,
+                 vacc_dt = vacc_dt,
+                 params = c(list(R0 = 1.1, k = 1, iota = 0.25),
+                            param_defaults),
+                 days_in_step = 7,
+                 observe_fun = beta_detect_monthly,
+                 serial_fun = serial_lognorm,
+                 dispersal_fun = dispersal_lognorm,
+                 secondary_fun = nbinom_constrained,
+                 incursion_fun = sim_incursions_pois,
+                 movement_fun = sim_movement_continuous,
+                 sequential = FALSE, allow_invalid = TRUE,
+                 leave_bounds = TRUE, max_tries = 100,
+                 summary_fun = use_mget, 
+                 track = FALSE,
+                 weights = NULL,
+                 row_probs = NULL,
+                 coverage = TRUE,
+                 break_threshold = 0.8, 
+                 by_admin = FALSE) 
+}
+)
+
+# I_dt is the line list
+case_dt <- exe$I_dt
+head(case_dt)
+
+```
+
+Reconstruct bootstrapped trees (per Hampson et al. 2009) & prune any unlikely case pairs based on the distribution of distances between cases and a pecentile cutoff (see Cori et al):
+
+```{r trees}
+# turn time step to dates
+case_dt$date <- as_date(duration(case_dt$t_infected, "weeks") + ymd("2002-01-1"))
+# construct one tree
+ttree <- 
+        build_tree(id_case = case_dt$id,
+                   id_biter = 0, # we don't know the progenitors 
+                   x_coord = case_dt$x_coord,
+                   y_coord = case_dt$y_coord,
+                   owned = 0, 
+                   date_symptoms = case_dt$date,
+                   days_uncertain = 0,
+                   use_known_source = FALSE,
+                   prune = TRUE,
+                   si_fun = si_gamma1,
+                   dist_fun = dist_gamma1, 
+                   params = params_treerabid, 
+                   cutoff = 0.95)
+
+# Bootstrapped trees in parallel & reproducible with doRNG
+ ttrees <- 
+        boot_trees(id_case = case_dt$id,
+                   id_biter = 0, # we don't know the progenitors 
+                   x_coord = case_dt$x_coord,
+                   y_coord = case_dt$y_coord,
+                   owned = 0, 
+                   date_symptoms = case_dt$date,
+                   days_uncertain = 0,
+                   use_known_source = FALSE,
+                   prune = TRUE,
+                   si_fun = si_gamma1,
+                   dist_fun = dist_gamma1, 
+                   params = params_treerabid, 
+                   cutoff = 0.95,
+                   N = 5, 
+                   seed = 105)
+```
+
+## Visualizing trees
+
+We can then visualize the consensus links:
+```{r}
+
+```
+
+For some links, given date uncertainties, we don't know who-infected-whom (i.e. 
+the loops in the tree).
+```{r}
+
+```
+
+How certain are these links:
+```{r}
+
+```
+
+Incursions are those that didn't have any potential progenitor within the cutoff 
+time & distance. We can see the probability for each case being an incursion (total and 
+for those that were assigned as such):
+
+```{r}
+
+```
+
+
+We can also compute stats on the consensus tree (i.e. tree which includes the highest % of consensus links):
+
+```{r}
+
+```
+
+
+And vizualize this tree over time and space:
+
+```{r}
+
+```
+
+# Customize it
+
+Writing your own si and distance distribution functions:
+```{r}
+
+```
+
+
+Let's pretend that we actually know some of these case pairs from contact tracing data and reconstruct only unknown links:
+
+```{r known}
+
+```
+
+## Some preliminary work re: estimating detection probabilities
+
+Cori et al. 2019 use analytic expectations of temporal, spatial, genetic distances
+between case pairs given a detection probability. 
+
+Working backwards from there, if we can link case pairs to get the 
+distribution of distances (genetic | spatial | temporal) between case pairs, can we compare this to the analytical expectations to estimate detection probabilities?
+
+Right now, only one that really works in temporal:
+
+```{r }
+
+# Line list full | 85% | 50% | 20% data & estimate detection 
+
+```
+
+Also the genetic data:
+
+```{r detection}
+
+# Simplified assignment of lineages & snps 
+
+# Line list with 25% | 10% | 5% data & estimate detection 
+
+```
+
+And this is using known case links, so really the *perfect* data, i.e. if it doesn't work in this context, it's unlikely to work in real data world. The real test here would be to simulat with known10.714 detection probability, reconstruct transmission tree, and then try to recover the detection probability. 
+
+## Known limitations & future directions
+
+- Better incorporating uncertainty in contact tracing data to avoid creating loops
+  & getting reasonable dates?
+- Incorporating uncertainty into location data?
+- Using N data streams with N uncertainties & N cutoffs/prob distributions
+- Using genetic data (SNPs between cases per Cori | Lineage assignemnts)
+- Using partial data (i.e. incorporating genetic data when it is available)
+- Use simulations to validate the detection estimates
+    - Get the distance | empirical bits working in the detection est
+    - Simulate from simrabid + reconstruct bootstrapped trees + 
+      estimate detection for each tree & compare to known estimate
+    - Combining data streams in this context?
