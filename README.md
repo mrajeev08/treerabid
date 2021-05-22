@@ -208,25 +208,25 @@ system.time({
 }
 )
 #>    user  system elapsed 
-#>   5.468   0.440   6.701
+#>   4.705   0.400   5.152
 
 # I_dt is the line list
 case_dt <- exe$I_dt
 head(case_dt)
 #>    id cell_id row_id progen_id path  x_coord y_coord invalid outbounds
-#> 1:  1    2054   1121        -1    0 660686.6 9808387   FALSE     FALSE
-#> 2:  2    1058    384        -1    0 644686.6 9822387   FALSE     FALSE
-#> 3:  3    1760    882        -1    0 646686.6 9812387   FALSE     FALSE
-#> 4:  4     661    200        -1    0 667686.6 9828387   FALSE     FALSE
-#> 5:  5    2137   1194        -1    0 673686.6 9807387   FALSE     FALSE
-#> 6:  6    4758   3559         6    0 704712.1 9770376   FALSE     FALSE
+#> 1:  1    4716   3517        -1    0 662686.6 9770387   FALSE     FALSE
+#> 2:  2    2114   1171        -1    0 650686.6 9807387   FALSE     FALSE
+#> 3:  3    2558   1573         3    0 674706.4 9801302   FALSE     FALSE
+#> 4:  4    5144   3896        -1    0 670686.6 9764387   FALSE     FALSE
+#> 5:  5    3449   2347        -1    0 655686.6 9788387   FALSE     FALSE
+#> 6:  6    5144   3896         4    0 670932.1 9764649   FALSE     FALSE
 #>    t_infected contact infected t_infectious month detect_prob detected
-#> 1:    0.00000       N     TRUE     9.285714     2   0.8708125        1
-#> 2:    0.00000       N     TRUE    12.000000     3   0.9285117        1
-#> 3:    0.00000       N     TRUE    23.428571     5   0.9268917        1
-#> 4:    0.00000       N     TRUE    26.571429     6   0.9739897        1
-#> 5:    0.00000       N     TRUE    40.714286    10   0.8921821        1
-#> 6:   47.85714       S     TRUE    50.740595    12   0.8711260        1
+#> 1:    0.00000       N     TRUE      5.00000     1   0.9178077        1
+#> 2:    0.00000       N     TRUE      9.00000     2   0.9095657        1
+#> 3:   11.57143       S     TRUE     13.25213     3   0.9452634        1
+#> 4:    0.00000       N     TRUE     24.00000     6   0.9244820        1
+#> 5:    0.00000       N     TRUE     23.28571     5   0.8823221        1
+#> 6:   24.00000       S     TRUE     33.38010     8   0.9492439        1
 ```
 
 Reconstruct bootstrapped trees (per Hampson et al. 2009) & prune any
@@ -235,9 +235,10 @@ and a pecentile cutoff (see Cori et al):
 
 ``` r
 # turn time step to dates
-case_dt$date <- as_date(duration(case_dt$t_infected, "weeks") + ymd("2002-01-1"))
+case_dt$date <- as_date(duration(case_dt$t_infected, "weeks") + ymd(start_up$start_date))
 # construct one tree
-ttree <- 
+system.time({
+  ttree <- 
         build_tree(id_case = case_dt$id,
                    id_biter = 0, # we don't know the progenitors 
                    x_coord = case_dt$x_coord,
@@ -248,12 +249,17 @@ ttree <-
                    use_known_source = FALSE,
                    prune = TRUE,
                    si_fun = si_gamma1,
-                   dist_fun = dist_gamma1, 
+                   dist_fun = dist_weibull1, 
                    params = params_treerabid, 
                    cutoff = 0.95)
+})
+#>    user  system elapsed 
+#>   0.020   0.001   0.021
+
 
 # Bootstrapped trees in parallel & reproducible with doRNG
- ttrees <- 
+system.time({
+  ttrees <- 
         boot_trees(id_case = case_dt$id,
                    id_biter = 0, # we don't know the progenitors 
                    x_coord = case_dt$x_coord,
@@ -264,12 +270,41 @@ ttree <-
                    use_known_source = FALSE,
                    prune = TRUE,
                    si_fun = si_gamma1,
-                   dist_fun = dist_gamma1, 
+                   dist_fun = dist_weibull1, 
                    params = params_treerabid, 
                    cutoff = 0.95,
-                   N = 5, 
+                   N = 100, 
                    seed = 105)
+})
 #> Warning: executing %dopar% sequentially: no parallel backend registered
+#>    user  system elapsed 
+#>   1.979   0.057   2.114
+
+# Check is this really reproducible? 
+system.time({
+  ttrees2 <- 
+        boot_trees(id_case = case_dt$id,
+                   id_biter = 0, # we don't know the progenitors 
+                   x_coord = case_dt$x_coord,
+                   y_coord = case_dt$y_coord,
+                   owned = 0, 
+                   date_symptoms = case_dt$date,
+                   days_uncertain = 0,
+                   use_known_source = FALSE,
+                   prune = TRUE,
+                   si_fun = si_gamma1,
+                   dist_fun = dist_weibull1, 
+                   params = params_treerabid, 
+                   cutoff = 0.95,
+                   N = 100, 
+                   seed = 105)
+})
+#>    user  system elapsed 
+#>   1.849   0.044   1.924
+
+# Reproducible?
+identical(ttrees, ttrees2)
+#> [1] TRUE
 ```
 
 ## Visualizing trees

@@ -135,9 +135,10 @@ Reconstruct bootstrapped trees (per Hampson et al. 2009) & prune any unlikely ca
 
 ```{r trees}
 # turn time step to dates
-case_dt$date <- as_date(duration(case_dt$t_infected, "weeks") + ymd("2002-01-1"))
+case_dt$date <- as_date(duration(case_dt$t_infected, "weeks") + ymd(start_up$start_date))
 # construct one tree
-ttree <- 
+system.time({
+  ttree <- 
         build_tree(id_case = case_dt$id,
                    id_biter = 0, # we don't know the progenitors 
                    x_coord = case_dt$x_coord,
@@ -148,12 +149,15 @@ ttree <-
                    use_known_source = FALSE,
                    prune = TRUE,
                    si_fun = si_gamma1,
-                   dist_fun = dist_gamma1, 
+                   dist_fun = dist_weibull1, 
                    params = params_treerabid, 
                    cutoff = 0.95)
+})
+
 
 # Bootstrapped trees in parallel & reproducible with doRNG
- ttrees <- 
+system.time({
+  ttrees <- 
         boot_trees(id_case = case_dt$id,
                    id_biter = 0, # we don't know the progenitors 
                    x_coord = case_dt$x_coord,
@@ -164,11 +168,36 @@ ttree <-
                    use_known_source = FALSE,
                    prune = TRUE,
                    si_fun = si_gamma1,
-                   dist_fun = dist_gamma1, 
+                   dist_fun = dist_weibull1, 
                    params = params_treerabid, 
                    cutoff = 0.95,
-                   N = 5, 
+                   N = 100, 
                    seed = 105)
+})
+
+# Check is this really reproducible? 
+system.time({
+  ttrees2 <- 
+        boot_trees(id_case = case_dt$id,
+                   id_biter = 0, # we don't know the progenitors 
+                   x_coord = case_dt$x_coord,
+                   y_coord = case_dt$y_coord,
+                   owned = 0, 
+                   date_symptoms = case_dt$date,
+                   days_uncertain = 0,
+                   use_known_source = FALSE,
+                   prune = TRUE,
+                   si_fun = si_gamma1,
+                   dist_fun = dist_weibull1, 
+                   params = params_treerabid, 
+                   cutoff = 0.95,
+                   N = 100, 
+                   seed = 105)
+})
+
+# Reproducible?
+identical(ttrees, ttrees2)
+
 ```
 
 ## Visualizing trees
