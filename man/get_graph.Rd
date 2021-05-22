@@ -4,9 +4,18 @@
 \alias{get_graph}
 \title{Turn a transmssion tree into a graph object}
 \usage{
-get_graph(ttree)
+get_graph(from, to, attrs)
 }
 \arguments{
+\item{from}{progenitor id's}
+
+\item{to}{case id's}
+
+\item{attrs}{data.table of vertex attributes where first column is the
+vertex name (i.e. corresponding to unique case ids); if passing to
+chain stats, this data.table should atleast have one additional column
+named \code{t} which has the date of the case. Cannot have duplicate vertex names!}
+
 \item{ttree}{data.table with columns \code{id_progen} (id of case progenitor),
 \code{id_case} (id of case), \code{t} (date of case), \code{x_coord}, and \code{y_coord}}
 }
