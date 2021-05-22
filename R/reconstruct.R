@@ -291,6 +291,30 @@ dist_gamma_mixed <- function(ttree, params, cutoff = NULL) {
   }
 }
 
+#' Mixture weibull dispersal kernel
+#'
+#' See ?si_gamma1 for more details.
+#'
+#' @export
+dist_weibull_mixed <- function(ttree, params, cutoff = NULL) {
+  if(is.null(cutoff)) {
+    ttree[, dist_prob := fcase(owned & dist_diff > 100,
+                               dweibull(dist_diff, shape= params$DK_shape_weibull,
+                                      scale = params$DK_scale_weibull),
+                               !owned & dist_diff > 100,
+                               dweibull(dist_diff, shape= params$DK2_shape_weibull,
+                                      scale = params$DK2_scale_weibull),
+                               dist_diff <= 100,
+                               pweibull(100, shape = params$DK_shape_weibull,
+                                      scale = params$DK_scale_weibull)/100)]
+  } else {
+    # return the cutoff value given a prob (either length 1 or length of the ttree)
+    ifelse(ttree$owned, qweibull(cutoff, shape = params$DK_shape_weibull,
+                                 scale = params$DK_scale_weibull),
+           qweibull(cutoff, shape = params$DK2_shape_weibull,
+                    scale = params$DK2_scale_weibull))
+  }
+}
 #' Mixture lognormal dispersal kernel
 #'
 #' See ?si_gamma1 for more details.
@@ -328,6 +352,25 @@ dist_gamma1<- function(ttree, params, cutoff = NULL) {
   }
 }
 
+#' Weibull dispersal kernel
+#'
+#' See ?si_gamma1 for more details.
+#'
+#' @export
+dist_weibull1<- function(ttree, params, cutoff = NULL) {
+  if(is.null(cutoff)) {
+    ttree[, dist_prob := fcase(dist_diff > 100,
+                               dweibull(dist_diff, shape= params$DK_shape_weibull,
+                                        scale = params$DK_scale_weibull),
+                               dist_diff <= 100,
+                               pweibull(100, shape = params$DK_shape_weibull,
+                                        scale = params$DK_scale_weibull)/100)]
+  } else {
+    # return the cutoff value given a prob (either length 1 or length of the ttree)
+    qweibull(cutoff, shape = params$DK_shape_weibull, scale = params$DK_scale_weibull)
+  }
+}
+
 #' Lognormal dispersal kernel
 #'
 #' See ?si_gamma1 for more details.
@@ -359,6 +402,25 @@ dist_gamma2 <- function(ttree, params, cutoff = NULL) {
   } else {
     # return the cutoff value given a prob (either length 1 or length of the ttree)
     qgamma(cutoff, shape = params$DK2_shape, scale = params$DK2_scale)
+  }
+}
+
+#' Convolved Weibull dispersal kernel
+#'
+#' See ?si_gamma1 for more details.
+#'
+#' @export
+dist_weibull2 <- function(ttree, params, cutoff = NULL) {
+  if(is.null(cutoff)) {
+    ttree[, dist_prob := fcase(dist_diff > 100,
+                               dweibull(dist_diff, shape= params$DK2_shape_weibull,
+                                        scale = params$DK2_scale_weibull),
+                               dist_diff <= 100,
+                               pweibull(100, shape = params$DK2_shape_weibull,
+                                        scale = params$DK2_scale_weibull)/100)]
+  } else {
+    # return the cutoff value given a prob (either length 1 or length of the ttree)
+    qweibull(cutoff, shape = params$DK2_shape_weibull, scale = params$DK2_scale_weibull)
   }
 }
 
