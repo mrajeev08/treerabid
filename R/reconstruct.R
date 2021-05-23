@@ -74,8 +74,11 @@ build_tree <- function(id_case,
             see `build_known_tree` function.")
     }
 
-    # get the uncertainty
-    known_tree[, t := case_dt$t[case_dt$id_case == id_case]]
+    known_tree <- copy(known_tree) # so working on copy specific to sim
+
+    # get the uncertainty for the simulation
+    known_tree$t <- case_dt$t[match(known_tree$id_case, case_dt$id_case)]
+    known_tree$t_progen <- case_dt$t[match(known_tree$id_progen, case_dt$id_case)]
 
     # Get their diff for time
     known_tree[, t_diff := as.numeric(t - t_progen)]
@@ -83,21 +86,15 @@ build_tree <- function(id_case,
     # fix any that have negative values due to uncertainty (better way?)
     known_tree$t_diff[known_tree$t_diff <= 0] <- min_time
 
-    # probabilities
-    si_fun(ttree = known_tree, params = params)
-    dist_fun(ttree = known_tree, params = params)
-    known_tree[, source_prob := dist_prob * t_prob][, prob_scale := source_prob/sum(source_prob), by = id_case]
-
     # Deal with multiple id's here (selecting ones that have multiple potential progenitors)
-    known_tree <- known_tree[, selected := assign_progen(prob_scale), by = id_case][selected == 1]
-    known_tree[, prob_ll := log(source_prob)]
+    known_tree <- select_progenitor(tree = known_tree,
+                                    si_fun = si_fun,
+                                    dist_fun = dist_fun,
+                                    params = params)
 
     # Filter out of progenitor assigment (but not out of the candidate progens!)
     case_dt <- case_dt[!(id_case %in% known_tree$id_case)]
 
-    # for further filtering out any invalid pairs
-    # (i.e. a known secondary case can't be a potential progenitor for it's biter)
-    invalid <- paste(known_tree$id_case, known_tree$id_biter)
   }
 
   # do a inner join to get possible progenitors
@@ -118,7 +115,8 @@ build_tree <- function(id_case,
 
   if(use_known_source) {
     # a candidate progenitor cannot be a known secondary case from contact tracing
-    ttree <- ttree[!(paste(id_progen, id_case) %in% invalid)]
+    ttree <- ttree[!(known_tree[, .(id_progen = id_case, id_case = id_progen)]),
+                   on = c("id_case", "id_progen")]
   }
 
   # For each case + progenitor combination, get the time and distance lag
@@ -139,14 +137,8 @@ build_tree <- function(id_case,
   }
 
   # This is actually the slow part so limiting # of possibilities speeds things up a lot
-  si_fun(ttree = ttree, params = params)
-  dist_fun(ttree = ttree, params = params)
-
-  # source probability
-  ttree[, source_prob := dist_prob * t_prob][, prob_scale := source_prob/sum(source_prob), by = id_case]
-  # filter to the chosen progenitor
-  ttree <- ttree[, selected := assign_progen(prob_scale), by = id_case][selected == 1]
-  ttree[, prob_ll := log(source_prob)]
+  ttree <- select_progenitor(tree = ttree, si_fun = si_fun, dist_fun = dist_fun,
+                             params = params)
 
   ttree <- rbind(incursions, ttree, fill = TRUE)
 
@@ -180,9 +172,7 @@ build_known_tree <- function(id_case,
                            x_coord_progen = x_coord,
                            y_coord_progen = y_coord,
                            id_progen = id_case,
-                           join_on = join)]
-
-  progen_dt[, join_ct := id_progen]
+                           join_ct = id_case)]
   setkey(progen_dt, join_ct)
 
   # Filter ones with non-zero biter ids
@@ -203,6 +193,21 @@ build_known_tree <- function(id_case,
 }
 
 # Helper functions ----------
+
+# Select progenitor
+select_progenitor <- function(tree, si_fun, dist_fun, params) {
+
+  # probabilities
+  si_fun(ttree = tree, params = params)
+  dist_fun(ttree = tree, params = params)
+  tree[, source_prob := dist_prob * t_prob][, prob_scale := source_prob/sum(source_prob), by = id_case]
+
+  # Select progenitors
+  tree <- tree[, selected := assign_progen(prob_scale), by = id_case][selected == 1]
+  tree[, prob_ll := log(source_prob)]
+
+  return(tree)
+}
 
 #' Assign progenitor
 #'
@@ -303,7 +308,7 @@ boot_trees <- function(id_case,
   msg <- "id_case has duplicated values,
           but you are not using a known set of possible sources for these cases,
           there should only be one record per case id!"
-  if(!known_tree) {
+  if(!use_known_source) {
     dups <- tabulate(id_case)
     if(any(dups > 1)) {
       stop(msg)
