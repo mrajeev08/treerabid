@@ -298,7 +298,24 @@ boot_trees <- function(id_case,
     known_tree <- NULL
   }
 
-  # Check for duplicated id's here! (i.e. depending on whether you are using a known source or not!)
+  # Check for duplicated id's here
+  # (i.e. depending on whether you are using a known source or not)
+  msg <- "id_case has duplicated values,
+          but you are not using a known set of possible sources for these cases,
+          there should only be one record per case id!"
+  if(!known_tree) {
+    dups <- tabulate(id_case)
+    if(any(dups > 1)) {
+      stop(msg)
+    }
+  } else {
+    # any biter ids that are < 1 (i.e. 0, neg numbers, and NAs)
+    dups <- tabulate(id_case[id_biter < 1])
+    if(any(dups > 1)) {
+      stop(msg)
+    }
+
+  }
 
   foreach(i = seq_len(N), .combine = 'rbind', .options.RNG = seed,
           .export = exp_funs,
