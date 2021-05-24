@@ -126,25 +126,25 @@ system.time({
 }
 )
 #>    user  system elapsed 
-#>   6.476   0.565   7.533
+#>   5.077   0.461   5.858
 
 # I_dt is the line list
 case_dt <- exe$I_dt
 head(case_dt)
 #>    id cell_id row_id progen_id path  x_coord y_coord invalid outbounds
-#> 1:  1    4497   3301         1    0 654020.2 9773229   FALSE     FALSE
-#> 2:  2    4497   3301         1    0 653924.8 9773151   FALSE     FALSE
-#> 3:  3    4497   3301         2    0 653901.5 9773138   FALSE     FALSE
-#> 4:  4    2561   1576        -1    0 677686.6 9801387   FALSE     FALSE
-#> 5:  5    4494   3298         3    0 650931.7 9772916   FALSE     FALSE
-#> 6:  6    4497   3301         3    0 654061.5 9773073   FALSE     FALSE
+#> 1:  1    4038   2858         1    0 684947.9 9779932   FALSE     FALSE
+#> 2:  2    4108   2922         1    0 684816.5 9779009   FALSE     FALSE
+#> 3:  3    4108   2922         1    0 684679.2 9779345   FALSE     FALSE
+#> 4:  4    4108   2922         1    0 684609.9 9779400   FALSE     FALSE
+#> 5:  5    4108   2922         1    0 684479.0 9779641   FALSE     FALSE
+#> 6:  6    4246   3054         1    0 682803.2 9777702   FALSE     FALSE
 #>    t_infected contact infected t_infectious month detect_prob detected
-#> 1:   3.428571       S     TRUE     4.419920     1   0.9072439        1
-#> 2:   4.419920       S     TRUE     6.789416     1   0.9072439        1
-#> 3:   6.789416       S     TRUE     9.870827     2   0.8625630        1
-#> 4:   0.000000       N     TRUE     9.285714     2   0.8625630        0
-#> 5:   9.870827       S     TRUE    11.421064     2   0.8625630        1
-#> 6:   9.870827       S     TRUE    12.236680     3   0.8776683        1
+#> 1:   1.285714       S     TRUE     2.000000     0   0.9287634        1
+#> 2:   1.285714       S     TRUE     3.850756     0   0.9287634        0
+#> 3:   1.285714       S     TRUE     2.000000     0   0.9287634        0
+#> 4:   1.285714       S     TRUE     4.093949     1   0.8789431        1
+#> 5:   1.285714       S     TRUE     8.561044     2   0.9318332        1
+#> 6:   1.285714       S     TRUE     5.001985     1   0.8789431        1
 ```
 
 Reconstruct bootstrapped trees (per Hampson et al. 2009) & prune any
@@ -214,7 +214,7 @@ system.time({
                    seed = 105)
 })
 #>    user  system elapsed 
-#>   5.435   0.808   7.969
+#>   1.673   0.098   1.804
 ```
 
 ## Visualizing trees
@@ -230,6 +230,7 @@ links_gr <- graph_from_data_frame(d = data.frame(from = links_all$id_progen,
 E(links_gr)$prob <- links_all$prob
 V(links_gr)$membership <- components(links_gr)$membership
 
+set.seed(179)
 ggraph(links_gr, layout = "kk") + 
   geom_edge_link0(aes(col = prob), alpha = 0.5) +
   geom_node_point(aes(col = factor(membership)), size = 0.3) +
@@ -251,7 +252,8 @@ cons_gr <- get_graph(from = links_consensus$id_progen,
                                          t = 0)])
 E(cons_gr)$prob <- links_consensus[!is.na(id_progen)]$prob
 V(cons_gr)$membership <- components(cons_gr)$membership
- 
+
+set.seed(145)
 # color incursions by membership + alpha = their probability
 ggraph(cons_gr, layout="kk") + 
   geom_edge_link0(aes(col = prob), alpha = 0.5) +
@@ -356,6 +358,13 @@ recover the detection probability.
 
 ## Known limitations & future directions
 
+-   Speeding up / more efficient parallelization
+    -   right now it’s too mem heavy to use a cluster size larger than 3
+        cores!
+    -   part to parallelize = the data.table joins? or the distance and
+        si functions?
+    -   make sure to manage data.table threads explicitly through
+        setDTthreads
 -   Better incorporating uncertainty in contact tracing data to avoid
     creating loops & getting reasonable dates?
 -   Incorporating uncertainty into location data?
