@@ -110,7 +110,7 @@ build_tree <- function(id_case,
   } else {
     ttree <- case_dt[progen_dt,
                      on = .(join > join_on),
-                     allow.cartesian = TRUE, nomatch = NULL][, -c("join", "max")]
+                     allow.cartesian = TRUE, nomatch = NULL][, -"join"]
   }
 
   if(use_known_source) {
@@ -278,7 +278,7 @@ boot_trees <- function(id_case,
                        owned,
                        date_symptoms, # needs to be in a date class
                        days_uncertain,
-                       exclude_progen = exclude_progen,
+                       exclude_progen = FALSE,
                        use_known_source = FALSE,
                        prune = TRUE,
                        si_fun,
