@@ -21,7 +21,7 @@ knitr::opts_chunk$set(
 context of contact tracing data for canine rabies in Tanzania for the Hampson Lab. 
 
 Based on:
-- [Hampsone et al. 2009. Transmission Dynamics and Prospects for the Elimination of Canine Rabies.](https://journals.plos.org/plosbiology/article?id=10.1371/journal.pbio.1000053)
+- [Hampson et al. 2009. Transmission Dynamics and Prospects for the Elimination of Canine Rabies.](https://journals.plos.org/plosbiology/article?id=10.1371/journal.pbio.1000053)
 - [Cori et al. 2019. A graph-based evidence synthesis approach to detecting outbreak clusters: An application to dog rabies.](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1006554)
 - Mancy et al. in prep.
 
@@ -39,7 +39,7 @@ Suggests: `ggraph`, `ggplot2`, `igraph`, `foreach`, `doRNG`, `parallel`
 
 ## Example using `treerabid` + `simrabid`
 
-```{r}
+```{r, message=FALSE}
 # Dependencies for simrabid
 library(raster)
 library(data.table)
@@ -137,26 +137,43 @@ Reconstruct bootstrapped trees (per Hampson et al. 2009) & prune any unlikely ca
 # turn time step to dates
 case_dt$date <- as_date(duration(case_dt$t_infected, "weeks") + ymd(start_up$start_date))
 # construct one tree
-system.time({
-  ttree <- 
-        build_tree(id_case = case_dt$id,
-                   id_biter = 0, # we don't know the progenitors 
-                   x_coord = case_dt$x_coord,
-                   y_coord = case_dt$y_coord,
-                   owned = 0, 
-                   date_symptoms = case_dt$date,
-                   days_uncertain = 0,
-                   exclude_progen = FALSE, 
-                   use_known_source = FALSE,
-                   prune = TRUE,
-                   si_fun = si_gamma1,
-                   dist_fun = dist_weibull1, 
-                   params = params_treerabid, 
-                   cutoff = 0.95)
-})
+ttrees <- 
+  boot_trees(id_case = case_dt$id,
+             id_biter = 0, # we don't know the progenitors 
+             x_coord = case_dt$x_coord,
+             y_coord = case_dt$y_coord,
+             owned = 0, 
+             date_symptoms = case_dt$date,
+             days_uncertain = 0,
+             use_known_source = FALSE,
+             prune = TRUE,
+             si_fun = si_gamma1,
+             dist_fun = dist_weibull1, 
+             params = params_treerabid, 
+             cutoff = 0.95,
+             N = 1, 
+             seed = 105)
+ttrees2 <- 
+  boot_trees(id_case = case_dt$id,
+             id_biter = 0, # we don't know the progenitors 
+             x_coord = case_dt$x_coord,
+             y_coord = case_dt$y_coord,
+             owned = 0, 
+             date_symptoms = case_dt$date,
+             days_uncertain = 0,
+             use_known_source = FALSE,
+             prune = TRUE,
+             si_fun = si_gamma1,
+             dist_fun = dist_weibull1, 
+             params = params_treerabid, 
+             cutoff = 0.95,
+             N = 1, 
+             seed = 105)
 
+# Are these reproducible?
+identical(ttrees, ttrees2)
 
-# Bootstrapped trees in parallel & reproducible with doRNG
+# Lets do 100 trees and vizualize them
 system.time({
   ttrees <- 
         boot_trees(id_case = case_dt$id,
@@ -177,83 +194,91 @@ system.time({
                    seed = 105)
 })
 
-# Check is this really reproducible? 
-system.time({
-  ttrees2 <- 
-        boot_trees(id_case = case_dt$id,
-                   id_biter = 0, # we don't know the progenitors 
-                   x_coord = case_dt$x_coord,
-                   y_coord = case_dt$y_coord,
-                   owned = 0, 
-                   date_symptoms = case_dt$date,
-                   days_uncertain = 0,
-                   use_known_source = FALSE,
-                   prune = TRUE,
-                   si_fun = si_gamma1,
-                   dist_fun = dist_weibull1, 
-                   params = params_treerabid, 
-                   cutoff = 0.95,
-                   N = 100, 
-                   seed = 105)
-})
-
-# Reproducible?
-identical(ttrees, ttrees2)
-
 ```
 
 ## Visualizing trees
 
-We can then visualize the consensus links:
+We can then visualize the potential links:
 ```{r}
+links_all <- build_all_links(ttrees, N = 100)
+links_gr <- graph_from_data_frame(d = data.frame(from = links_all$id_progen, 
+                                                 to = links_all$id_case))
+E(links_gr)$prob <- links_all$prob
+V(links_gr)$membership <- components(links_gr)$membership
 
+ggraph(links_gr, layout = "kk") + 
+  geom_edge_link0(aes(col = prob), alpha = 0.5) +
+  geom_node_point(aes(col = factor(membership)), size = 0.3) +
+  scale_color_discrete(guide = "none") +
+  scale_edge_color_distiller(direction = 1) +
+  theme_graph()
 ```
 
-For some links, given date uncertainties, we don't know who-infected-whom (i.e. 
-the loops in the tree).
+Visualize the consensus links and how certain they are:
 ```{r}
 
-```
-
-How certain are these links:
-```{r}
+# get the time!
+links_consensus <- build_consensus_links(links_all)
+cons_gr <- get_graph(from = links_consensus$id_progen, 
+                     to = links_consensus$id_case, 
+                     attrs = case_dt[, .(id_case = id, 
+                                         t = 0)])
+E(cons_gr)$prob <- links_consensus[!is.na(id_progen)]$prob
+V(cons_gr)$membership <- components(cons_gr)$membership
+ 
+# color incursions by membership + alpha = their probability
+ggraph(cons_gr, layout="kk") + 
+  geom_edge_link0(aes(col = prob), alpha = 0.5) +
+  geom_node_point(aes(col = factor(membership)),size = 0.3) +
+  scale_edge_color_distiller(direction = 1) +
+  scale_color_discrete(guide = "none") +
+  theme_graph()
 
 ```
 
 Incursions are those that didn't have any potential progenitor within the cutoff 
 time & distance. We can see the probability for each case being an incursion (total and 
-for those that were assigned as such):
+for those that were assigned as such) (actually this is always one because not any uncertainty in dates!)
 
-```{r}
+```{r, eval=FALSE}
+incs_all <- links_all[is.na(id_progen)]
 
-```
-
-
-We can also compute stats on the consensus tree (i.e. tree which includes the highest % of consensus links):
-
-```{r}
+ggplot(incs_all) +
+  geom_histogram(aes(x = prob))
 
 ```
 
 
-And vizualize this tree over time and space:
+Compute chains stats on the consensus links:
 
 ```{r}
+chain_stats <- get_chain_stats(cons_gr)
+ggplot(chain_stats) +
+  geom_histogram(aes(x = size))
+ggplot(chain_stats) +
+  geom_histogram(aes(x = length))
 
+```
+
+
+We can also vizualize the consensus tree (i.e. tree which includes the highest % of consensus links):
+
+```{r}
+tree_consensus <- build_consensus_tree(links_consensus, ttrees)
 ```
 
 # Customize it
 
 Writing your own si and distance distribution functions:
 ```{r}
-
+# customizing params 
 ```
 
 
 Let's pretend that we actually know some of these case pairs from contact tracing data and reconstruct only unknown links:
 
 ```{r known}
-
+# using known traced data
 ```
 
 ## Some preliminary work re: estimating detection probabilities
@@ -277,6 +302,14 @@ Also the genetic data:
 ```{r detection}
 
 # Simplified assignment of lineages & snps 
+
+# Current circulating lineages to sample from
+
+# Plus probability of novel lineage being introduced into the Serengeti
+
+# snp distribution between lineages
+
+# mutation rate within lineages (assume that between lineage snp + within lineage snps are additive?) 
 
 # Line list with 25% | 10% | 5% data & estimate detection 
 
