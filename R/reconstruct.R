@@ -184,7 +184,7 @@ build_known_tree <- function(id_case,
   # Inner join with the biters
   known_tree <- progen_dt[known_biters, on = "join_ct"][, -"join_ct"]
 
-  # Get their distance difference and typ
+  # Get their distance difference and type
   known_tree[, c("dist_diff",
                  "type") := .(sqrt((x_coord - x_coord_progen)^2 + (y_coord - y_coord_progen)^2),
                               "traced")]
@@ -195,6 +195,14 @@ build_known_tree <- function(id_case,
 # Helper functions ----------
 
 # Select progenitor
+#' Wrapper to select single progenitor in each case
+#'
+#' @param tree the data.table with possible case pairs to select from
+#' @inheritParams build_tree
+#'
+#' @return a data.table filtered to the selected case-progenitor pair
+#' @keywords internal
+#'
 select_progenitor <- function(tree, si_fun, dist_fun, params) {
 
   # probabilities
