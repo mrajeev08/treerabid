@@ -27,8 +27,8 @@ Install from github with:
 devtools::install_github("mrajeev08/treerabid")
 ```
 
-Dependencies: `data.table`, Suggests: `ggraph`, `ggplot2`, `igraph`,
-`foreach`, `doRNG`, `parallel`
+Dependencies: `data.table`, `foreach`, `doRNG`, `parallel` Suggests:
+`ggraph`, `ggplot2`, `igraph`,
 
 ## Example using `treerabid` + `simrabid`
 
@@ -126,25 +126,25 @@ system.time({
 }
 )
 #>    user  system elapsed 
-#>   5.111   0.467   5.993
+#>   6.476   0.565   7.533
 
 # I_dt is the line list
 case_dt <- exe$I_dt
 head(case_dt)
 #>    id cell_id row_id progen_id path  x_coord y_coord invalid outbounds
-#> 1:  1    4038   2858         1    0 684947.9 9779932   FALSE     FALSE
-#> 2:  2    4108   2922         1    0 684816.5 9779009   FALSE     FALSE
-#> 3:  3    4108   2922         1    0 684679.2 9779345   FALSE     FALSE
-#> 4:  4    4108   2922         1    0 684609.9 9779400   FALSE     FALSE
-#> 5:  5    4108   2922         1    0 684479.0 9779641   FALSE     FALSE
-#> 6:  6    4246   3054         1    0 682803.2 9777702   FALSE     FALSE
+#> 1:  1    4497   3301         1    0 654020.2 9773229   FALSE     FALSE
+#> 2:  2    4497   3301         1    0 653924.8 9773151   FALSE     FALSE
+#> 3:  3    4497   3301         2    0 653901.5 9773138   FALSE     FALSE
+#> 4:  4    2561   1576        -1    0 677686.6 9801387   FALSE     FALSE
+#> 5:  5    4494   3298         3    0 650931.7 9772916   FALSE     FALSE
+#> 6:  6    4497   3301         3    0 654061.5 9773073   FALSE     FALSE
 #>    t_infected contact infected t_infectious month detect_prob detected
-#> 1:   1.285714       S     TRUE     8.320474     2   0.8913024        1
-#> 2:   1.285714       S     TRUE     4.546957     1   0.8998405        1
-#> 3:   1.285714       S     TRUE     2.000000     0   0.8880692        1
-#> 4:   1.285714       S     TRUE    18.801937     4   0.9207375        1
-#> 5:   1.285714       S     TRUE     2.000000     0   0.8880692        1
-#> 6:   1.285714       S     TRUE     2.896519     0   0.8880692        0
+#> 1:   3.428571       S     TRUE     4.419920     1   0.9072439        1
+#> 2:   4.419920       S     TRUE     6.789416     1   0.9072439        1
+#> 3:   6.789416       S     TRUE     9.870827     2   0.8625630        1
+#> 4:   0.000000       N     TRUE     9.285714     2   0.8625630        0
+#> 5:   9.870827       S     TRUE    11.421064     2   0.8625630        1
+#> 6:   9.870827       S     TRUE    12.236680     3   0.8776683        1
 ```
 
 Reconstruct bootstrapped trees (per Hampson et al. 2009) & prune any
@@ -214,7 +214,7 @@ system.time({
                    seed = 105)
 })
 #>    user  system elapsed 
-#>   2.535   0.192   2.977
+#>   5.435   0.808   7.969
 ```
 
 ## Visualizing trees
