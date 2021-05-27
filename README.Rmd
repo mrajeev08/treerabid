@@ -219,7 +219,9 @@ Visualize the consensus links and how certain they are:
 ```{r}
 
 # get the time!
-links_consensus <- build_consensus_links(links_all)
+links_consensus <- build_consensus_links(links_all, 
+                                         case_dates = case_dt[, .(id_case = id, 
+                                                                  symptoms_started = date)])
 cons_gr <- get_graph(from = links_consensus$id_progen, 
                      to = links_consensus$id_case, 
                      attrs = case_dt[, .(id_case = id, 

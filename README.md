@@ -126,25 +126,25 @@ system.time({
 }
 )
 #>    user  system elapsed 
-#>   5.077   0.461   5.858
+#>   5.043   0.424   5.600
 
 # I_dt is the line list
 case_dt <- exe$I_dt
 head(case_dt)
 #>    id cell_id row_id progen_id path  x_coord y_coord invalid outbounds
-#> 1:  1    4038   2858         1    0 684947.9 9779932   FALSE     FALSE
-#> 2:  2    4108   2922         1    0 684816.5 9779009   FALSE     FALSE
-#> 3:  3    4108   2922         1    0 684679.2 9779345   FALSE     FALSE
-#> 4:  4    4108   2922         1    0 684609.9 9779400   FALSE     FALSE
-#> 5:  5    4108   2922         1    0 684479.0 9779641   FALSE     FALSE
-#> 6:  6    4246   3054         1    0 682803.2 9777702   FALSE     FALSE
+#> 1:  1    2490   1510        -1    0 676686.6 9802387   FALSE     FALSE
+#> 2:  2    2576   1591         2    0 692973.0 9801766   FALSE     FALSE
+#> 3:  3    2576   1591         2    0 692924.9 9801737   FALSE     FALSE
+#> 4:  4    2576   1591         3    0 692992.1 9801873   FALSE     FALSE
+#> 5:  5    4302   3109        -1    0 668686.6 9776387   FALSE     FALSE
+#> 6:  6    4100   2914        -1    0 676686.6 9779387   FALSE     FALSE
 #>    t_infected contact infected t_infectious month detect_prob detected
-#> 1:   1.285714       S     TRUE     2.000000     0   0.9287634        1
-#> 2:   1.285714       S     TRUE     3.850756     0   0.9287634        0
-#> 3:   1.285714       S     TRUE     2.000000     0   0.9287634        0
-#> 4:   1.285714       S     TRUE     4.093949     1   0.8789431        1
-#> 5:   1.285714       S     TRUE     8.561044     2   0.9318332        1
-#> 6:   1.285714       S     TRUE     5.001985     1   0.8789431        1
+#> 1:   0.000000       N     TRUE      7.00000     1   0.9159249        1
+#> 2:   9.657419       S     TRUE     10.00000     2   0.9377713        1
+#> 3:  10.000000       S     TRUE     11.73716     2   0.9377713        1
+#> 4:  11.737164       S     TRUE     18.90483     4   0.8987660        1
+#> 5:   0.000000       N     TRUE     12.14286     3   0.9223063        1
+#> 6:   0.000000       N     TRUE     18.71429     4   0.8987660        0
 ```
 
 Reconstruct bootstrapped trees (per Hampson et al. 2009) & prune any
@@ -214,7 +214,7 @@ system.time({
                    seed = 105)
 })
 #>    user  system elapsed 
-#>   1.673   0.098   1.804
+#>   1.979   0.063   2.108
 ```
 
 ## Visualizing trees
@@ -245,7 +245,9 @@ Visualize the consensus links and how certain they are:
 
 ``` r
 # get the time!
-links_consensus <- build_consensus_links(links_all)
+links_consensus <- build_consensus_links(links_all, 
+                                         case_dates = case_dt[, .(id_case = id, 
+                                                                  symptoms_started = date)])
 cons_gr <- get_graph(from = links_consensus$id_progen, 
                      to = links_consensus$id_case, 
                      attrs = case_dt[, .(id_case = id, 
