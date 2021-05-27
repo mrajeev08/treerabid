@@ -4,24 +4,21 @@
 \alias{build_known_tree}
 \title{Reconstruct known tree (i.e. from tracing data)}
 \usage{
-build_known_tree(t_dt, t_dt_on, si_fun, dist_fun, params, min_time = 1e-06)
+build_known_tree(id_case, id_biter, y_coord, x_coord, owned, date_symptoms)
 }
 \arguments{
-\item{t_dt}{made inside build_tree}
+\item{id_case}{id of case}
 
-\item{t_dt_on}{made inside build_tree}
+\item{id_biter}{id of biter (i.e. known biter from contact tracing data, if
+unknown should be 0, if no contact tracing data, can pass NULL)}
 
-\item{si_fun}{the function to get the probability of a given temporal
-difference between cases in days (i.e. the serial interval)}
+\item{y_coord}{y coordinate of case (should be in UTM: to do = use haversine distance for long/lat)}
 
-\item{dist_fun}{the function to get the probability of a given spatial
-difference between cases in meters (i.e. the dispersal kernel)}
+\item{x_coord}{x coordinate of case (should be in UTM: to do = use haversine distance for long/lat)}
 
-\item{params}{list of parameters to pass to si_fun and dist_fun}
+\item{owned}{whether animal is owned or not (per Katie, to account for uncertainty in case locations)}
 
-\item{min_time}{if uncertainty results in negative time difference between
-known case pairs, set it to this value (better way to deal with propagating
-uncertainty given known case pairs?)}
+\item{date_symptoms}{case date (i.e. date symptoms started)}
 }
 \value{
 a data.table with the known contact tracing tree

@@ -4,10 +4,13 @@
 \alias{build_consensus_links}
 \title{Build consensus links between cases (i.e. most often selected progenitors for a given case)}
 \usage{
-build_consensus_links(all_links)
+build_consensus_links(all_links, case_dates)
 }
 \arguments{
 \item{all_links}{output from \code{build_all_links}}
+
+\item{case_dates}{data.table with two columns id_case (id of case) and symptoms_started
+(date symptoms started of case without uncertainty).}
 }
 \value{
 a data.table with the case pairs most often linked in transmission tree and their

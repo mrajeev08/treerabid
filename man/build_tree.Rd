@@ -12,12 +12,15 @@ build_tree(
   owned,
   date_symptoms,
   days_uncertain,
+  exclude_progen = FALSE,
   use_known_source = FALSE,
+  known_tree = NULL,
   prune = TRUE,
   si_fun,
   dist_fun,
   cutoff = 0.95,
-  params
+  params,
+  min_time = 1e-06
 )
 }
 \arguments{
@@ -36,6 +39,9 @@ unknown should be 0, if no contact tracing data, can pass NULL)}
 
 \item{days_uncertain}{uncertainty in days around case date}
 
+\item{exclude_progen}{boolean of length id_case or 1, if TRUE then case should be excluded as a potential
+progenitor (i.e. if including livestock cases or other species that are dead-end transmissions)}
+
 \item{use_known_source}{whether to assign known progenitors from contact tracing data}
 
 \item{prune}{whether to prune links (i.e. based on Cori et al./Mancy et al.)
@@ -51,6 +57,10 @@ difference between cases in meters (i.e. the dispersal kernel)}
 linked if the distance or time difference is greater than the this \%ile of the distribution)}
 
 \item{params}{list of parameters to pass to si_fun and dist_fun}
+
+\item{min_time}{if uncertainty results in negative time difference between
+known case pairs, set it to this value (better way to deal with propagating
+uncertainty given known case pairs?)}
 }
 \value{
 a data.table with the reconstructed tree
