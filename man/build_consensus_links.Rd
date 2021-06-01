@@ -4,13 +4,25 @@
 \alias{build_consensus_links}
 \title{Build consensus links between cases (i.e. most often selected progenitors for a given case)}
 \usage{
-build_consensus_links(all_links, case_dates)
+build_consensus_links(
+  links_all,
+  case_dates,
+  fix_loops = c("by_date", "random"),
+  max_tries = 100
+)
 }
 \arguments{
-\item{all_links}{output from \code{build_all_links}}
+\item{links_all}{output from \code{build_all_links}}
 
 \item{case_dates}{data.table with two columns id_case (id of case) and symptoms_started
 (date symptoms started of case without uncertainty).}
+
+\item{fix_loops}{If there are loops in the transmission tree (i.e. indicating uncertainty in
+who-infected-whom), the loops can either be broken by reassigning the progenitor
+of the case with the earliest case date in the loop (fix_loops = "by_date", the default). or by breaking and replacing
+links in the loop randomly (fix_loops = "random").}
+
+\item{max_tries}{number of times to iterate through and break loops}
 }
 \value{
 a data.table with the case pairs most often linked in transmission tree and their
