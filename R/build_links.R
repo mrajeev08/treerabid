@@ -137,6 +137,27 @@ find_loops <- function(links_consensus) {
               loops = loops))
 }
 
+#' Helper function to check for loops
+#'
+#' @param links either the consensus links or a single tree (with
+#'  cols id_case & id_progen)
+#'
+#' @return a vector of case ids which are part of a loop in the tree
+#' @export
+#'
+check_loops <- function(links) {
+
+  # build undirected & find the loops (which_multiple) & any cycles (girth)
+  gr <- graph_from_data_frame(d = links[, c("id_case",
+                                                      "id_progen")][!is.na((id_progen))],
+                              vertices = links[, "id_case"],
+                              directed = FALSE)
+  loops <- names(V(subgraph.edges(gr, E(gr)[count_multiple(gr) > 1])))
+  loops <- as.numeric(c(loops, names(girth(gr)$circle)))
+
+  return(loops)
+}
+
 #' Build the consensus tree (i.e. the tree with the highest proportion of consensus links)
 #'
 #' @param links_consensus output from `build_consensus_links`

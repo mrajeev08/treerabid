@@ -49,7 +49,8 @@ build_tree <- function(id_case,
   }
 
   # build line list with uncertainty
-  t <- date_symptoms +  add_uncertainty(days_uncertain)
+  t <- add_uncertainty(days_uncertain, date_symptoms, id_biter,
+                       id_case, use_known_source)
   case_dt <- data.table(id_case, id_biter, x_coord, y_coord, owned, t, join = t)
   case_dt$type <- "reconstructed" # for tracking whether using known sources or not
 
@@ -232,9 +233,42 @@ assign_progen <- function(prob_scaled) {
 #' Add uncertainty
 #'
 #' @keywords internal
-add_uncertainty <- function(uncertainty){
+add_uncertainty <- function(uncertainty, date_symptoms, id_biter,
+                            id_case, use_known_source, buffer = 7,
+                            max_tries = 100){
 
-  days_offset <- unlist(lapply(uncertainty, sample, size = 1)) * sample(c(-1, 1), length(uncertainty), replace = TRUE)
+  if(any(uncertainty) > 0) {
+
+    days_offset <- unlist(lapply(uncertainty, sample, size = 1))
+    sign <- sample(c(-1, 1), length(uncertainty), replace = TRUE)
+    date_uncertain <- date_symptoms +  days_offset * sign
+    niter <- 0
+
+    if(use_known_source) {
+      date_min <- date_uncertain[match(id_biter, id_case)] + buffer
+      date_min[is.na(date_min)] <- date_uncertain[is.na(date_min)]
+
+      while(any(date_uncertain < date_min) & niter <= max_tries) {
+        niter <- niter + 1
+        # constrain known biters
+        date_uncertain[date_uncertain < date_min] <- date_min[date_uncertain < date_min]
+
+        # check again
+        date_min <- date_uncertain[match(id_biter, id_case)] + buffer
+        date_min[is.na(date_min)] <- date_uncertain[is.na(date_min)]
+      }
+
+      if(any(date_uncertain < date_min)) {
+        warning("Significant date uncertainty means that some case dates may
+               not line up with known sequence of events from contact tracing!")
+      }
+    }
+
+    return(date_uncertain)
+
+  } else {
+    return(date_symptoms)
+  }
 
 }
 
