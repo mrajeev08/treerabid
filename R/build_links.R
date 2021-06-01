@@ -113,8 +113,8 @@ build_consensus_links <- function(links_all, case_dates,
 #' @param links_consensus
 #'
 #' @return
-#' @importFrom igraph V, subgraph.edges, E, count_multiple, girth, components,
-#'  vertex_attr, graph_from_data_frame
+#' @importFrom igraph V subgraph.edges E count_multiple girth components
+#'  vertex_attr graph_from_data_frame
 #' @keywords internal
 #'
 find_loops <- function(links_consensus) {
