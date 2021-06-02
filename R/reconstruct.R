@@ -223,11 +223,13 @@ select_progenitor <- function(tree, si_fun, dist_fun, params) {
 #' @keywords internal
 assign_progen <- function(prob_scaled) {
 
-  cum_scaled <- cumsum(prob_scaled)
+  cumul_scaled <- cumsum(prob_scaled)
   rand_var <- runif(1, 0, 1)
-  ind <- cum_scaled[cum_scaled > rand_var][1]
-  ifelse(cum_scaled == ind, 1L, 0L)
+  ind <- which(cumul_scaled > rand_var)[1]
+  selected <- rep(0L, length(cumul_scaled))
+  selected[ind] <- 1L
 
+  return(selected)
 }
 
 #' Add uncertainty
@@ -368,6 +370,7 @@ boot_trees <- function(id_case,
           .export = exp_funs,
           .packages = exp_pkgs) %dorng% {
             ttree <-
+
               build_tree(id_case = id_case, id_biter = id_biter, y_coord = y_coord,
                          x_coord = x_coord,
                          owned = owned, date_symptoms = date_symptoms,
