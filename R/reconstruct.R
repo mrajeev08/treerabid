@@ -75,26 +75,26 @@ build_tree <- function(id_case,
             see `build_known_tree` function.")
     }
 
-    known_tree <- copy(known_tree) # so working on copy specific to sim
+    k_tree <- copy(known_tree) # so working on copy specific to sim
 
-    # get the uncertainty for the simulation
-    known_tree$t <- case_dt$t[match(known_tree$id_case, case_dt$id_case)]
-    known_tree$t_progen <- case_dt$t[match(known_tree$id_progen, case_dt$id_case)]
+    # get the uncertainty for the simulation (this will be the first match)
+    k_tree$t <- case_dt$t[match(k_tree$id_case, case_dt$id_case)]
+    k_tree$t_progen <- case_dt$t[match(k_tree$id_progen, case_dt$id_case)]
 
     # Get their diff for time
-    known_tree[, t_diff := as.numeric(t - t_progen)]
+    k_tree[, t_diff := as.numeric(t - t_progen)]
 
     # fix any that have negative values due to uncertainty (better way?)
-    known_tree$t_diff[known_tree$t_diff <= 0] <- min_time
+    k_tree$t_diff[k_tree$t_diff <= 0] <- min_time
 
     # Deal with multiple id's here (selecting ones that have multiple potential progenitors)
-    known_tree <- select_progenitor(tree = known_tree,
+    k_tree <- select_progenitor(tree = k_tree,
                                     si_fun = si_fun,
                                     dist_fun = dist_fun,
                                     params = params)
 
     # Filter out of progenitor assigment (but not out of the candidate progens!)
-    case_dt <- case_dt[!(id_case %in% known_tree$id_case)]
+    case_dt <- case_dt[!(id_case %in% k_tree$id_case)]
 
   }
 
@@ -116,7 +116,7 @@ build_tree <- function(id_case,
 
   if(use_known_source) {
     # a candidate progenitor cannot be a known secondary case from contact tracing
-    ttree <- ttree[!(known_tree[, .(id_progen = id_case, id_case = id_progen)]),
+    ttree <- ttree[!(k_tree[, .(id_progen = id_case, id_case = id_progen)]),
                    on = c("id_case", "id_progen")]
   }
 
@@ -143,7 +143,7 @@ build_tree <- function(id_case,
 
   ttree <- rbind(incursions, ttree, fill = TRUE)
 
-  if(use_known_source) {  ttree <- rbind(ttree, known_tree, fill = TRUE) }
+  if(use_known_source) {  ttree <- rbind(ttree, k_tree, fill = TRUE) }
   ttree[, incursion := is.na(id_progen)]
 
   return(ttree)
@@ -247,7 +247,7 @@ add_uncertainty <- function(uncertainty, date_symptoms, id_biter,
     niter <- 0
 
     if(use_known_source) {
-      date_min <- date_uncertain[match(id_biter, id_case)] + buffer
+      date_min <- date_uncertain[match(id_biter, id_case)] + buffer # this will be relative to the first one
       date_min[is.na(date_min)] <- date_uncertain[is.na(date_min)]
 
       while(any(date_uncertain < date_min) & niter <= max_tries) {
