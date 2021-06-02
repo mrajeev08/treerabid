@@ -83,7 +83,7 @@ build_consensus_links <- function(links_all, case_dates,
 
     # bind them together
     links_consensus<-
-      rbindlist(list(links_consensus[!(id_case %in% fixed_links$id_case)],
+      rbindlist(list(links_consensus[!(id_case %in% to_fix$id_case)],
                      fixed_links, set_incs),
                 fill = TRUE)
 
