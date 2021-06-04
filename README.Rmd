@@ -60,7 +60,7 @@ library(doParallel)
 
 # simrabid & treerabid
 library(simrabid) # devtools::install_github("mrajeev08/simrabid")
-library(treerabid)
+devtools::load_all()
 
 ```
 
@@ -205,6 +205,9 @@ links_gr <- graph_from_data_frame(d = data.frame(from = links_all$id_progen,
                                                  to = links_all$id_case))
 E(links_gr)$prob <- links_all$prob
 V(links_gr)$membership <- components(links_gr)$membership
+
+# Get rid of the NA links (i.e. differentiating incursions)
+links_gr <- delete_vertices(links_gr, names(V(links_gr)) %in% "NA")
 
 set.seed(179)
 ggraph(links_gr, layout = "kk") + 
