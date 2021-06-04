@@ -14,10 +14,10 @@
 get_graph <- function(from, to, attrs) {
 
   I_gr <- data.table(from = from[!is.na(from)], to = to[!is.na(from)])
-  gr <- graph_from_data_frame(d = I_gr,
+  gr <- igraph::graph_from_data_frame(d = I_gr,
                               vertices = attrs,
                               directed = TRUE)
-  V(gr)$membership <- components(gr)$membership
+  igraph::V(gr)$membership <- igraph::components(gr)$membership
   return(gr)
 }
 
@@ -31,9 +31,9 @@ get_graph <- function(from, to, attrs) {
 #'
 get_chain_stats <- function(gr) {
 
-  comps <- components(gr)
+  comps <- igraph::components(gr)
   return(data.table(membership = seq(comps$no), size = comps$csize,
-                    length = unlist(lapply(decompose(gr), diameter))))
+                    length = unlist(lapply(igraph::decompose(gr), igraph::diameter))))
 }
 
 
@@ -48,9 +48,9 @@ get_chain_stats <- function(gr) {
 get_chain_membership <- function(gr) {
 
   return(
-    data.table(membership = vertex_attr(gr, "membership"),
-               id_case = vertex_attr(gr, "name"),
-               t_days = vertex_attr(gr, "t"))
+    data.table(membership = igraph::vertex_attr(gr, "membership"),
+               id_case = igraph::vertex_attr(gr, "name"),
+               t_days = igraph::vertex_attr(gr, "t"))
   )
 }
 

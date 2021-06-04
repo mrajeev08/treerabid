@@ -16,69 +16,146 @@ build_all_links <- function(ttrees, N) {
 
 #' Build consensus links between cases (i.e. most often selected progenitors for a given case)
 #'
-#' @param all_links output from `build_all_links`
+#' @param links_all output from `build_all_links`
 #' @param case_dates data.table with two columns id_case (id of case) and symptoms_started
 #'  (date symptoms started of case without uncertainty).
-#'
-#' If it is not clear which case seeded a chain, the case with the earliest start
-#' date is selected as the incursion.
-#'
-#' To do: add in parts to break a loop: if you assign to next closest progen,
-#' then you get lowest # of intros & higher Re ests, if you break the loops
-#' by known case date, then you'll get highest # of intros & lower Re ests.
+#' @param fix_loops If there are loops in the transmission tree (i.e. indicating uncertainty in
+#' who-infected-whom), the loops can either be broken by reassigning the progenitor
+#' of the case with the earliest case date in the loop (fix_loops = "by_date", the default). or by breaking and replacing
+#' links in the loop randomly (fix_loops = "random").
+#' @param max_tries number of times to iterate through and break loops
 #'
 #' @return a data.table with the case pairs most often linked in transmission tree and their
 #'  probability (i.e. prop of times a given case was selected as a progenitor)
 #' @export
 #'
-build_consensus_links <- function(all_links, case_dates) {
+build_consensus_links <- function(links_all, case_dates,
+                                  fix_loops = c("by_date", "random"),
+                                  max_tries = 100) {
 
+  fix_loops <- match.arg(fix_loops)
   # Get the consensus links
   links_consensus <- links_all[links_all[, .I[which.max(links)], by = c("id_case")]$V1] # returns first max
 
+  # spit out the loops and updated dt
+  list2env(find_loops(links_consensus), envir = environment())
+  niter <- 0
 
-  # fix_loops = c("chain_break",
-  #               "chain_replace",
-  #               "all_break",
-  #               "all_replace"),
-  # min_prob = 0.05
-  # Option to break loops
-  # get id_progen_id (the progenitor id of the progenitor id)
-  # while any id_case == id_progen_id are the loops
-  # break them by either assigning second most likely
-  # and updating id_progen_id
-  # or just breaking by min to known case date (if tied just selects one)
+  # option to reassign to next likely and check loops
+  while(length(loops) > 0 & niter <= max_tries) {
 
-  # only break loops to distinguish incursions
+    niter <- niter + 1
 
+    links_all <- membership[links_all, on = "id_case"]
+    setnames(membership, c("membership", "id_case"), c("membership_progen", "id_progen"))
+    links_all <- membership[links_all, on = "id_progen"]
+    links_all[, membership_progen := ifelse(is.na(membership_progen), 0,
+                                            membership_progen)]
+
+    if(fix_loops == "by_date") {
+
+      # join with case dates
+      links_consensus <- links_consensus[case_dates, on = "id_case"]
+      setnames(links_consensus, "symptoms_started", "selector")
+
+    } else {
+
+      # get a random variate to select by
+      links_consensus$selector <- runif(nrow(links_consensus))
+
+    }
+
+    # Filter to the ones with loops
+    to_fix <- links_consensus[id_case %in% loops]
+
+    # Find the minimum selector (either by case date or randomly select link to break)
+    to_fix <- to_fix[to_fix[, .I[which.min(selector)],
+                            by = c("membership")]$V1]
+
+    # For those that have no incursions and are also the minimum case replace
+    # with the next most likely progen, that is not already in the current chains
+    candidate_links <- links_all[id_case %in% to_fix$id_case & membership != membership_progen]
+    fixed_links <- candidate_links[candidate_links[, .I[which.max(links)], by = c("id_case")]$V1]
+
+    # if none then set to NA (prob & links)
+    set_incs <- to_fix[!(id_case %in% fixed_links$id_case)]
+    set_incs[, c("id_progen", "links", "prob") := .(NA, NA, NA)]
+
+    # bind them together
+    links_consensus<-
+      rbindlist(list(links_consensus[!(id_case %in% to_fix$id_case)],
+                     fixed_links, set_incs),
+                fill = TRUE)
+
+    # clean links_consensus & links_all
+    links_consensus[, c("membership", "selector", "membership_progen") := NULL]
+    links_all[, c("membership", "membership_progen") := NULL]
+
+    # update and recheck for loops
+    list2env(find_loops(links_consensus), envir = environment())
+  }
+
+  # Test to make sure no more loops and warn if there are!
+  if(length(loops) > 0) {
+
+    warning("There are still loops in the transmission tree, indicating that case
+            date uncertainty may be too high to indentify introductions and differentiate chains.
+            You can also try increasing the value of max_tries.")
+
+  }
+
+  # Clean up the data.table
+  return(links_consensus[, -"membership"])
+}
+
+#' Internal function for finding loops
+#'
+#' @param links_consensus
+#'
+#' @return
+#' @importFrom igraph V subgraph.edges E count_multiple girth components
+#'  vertex_attr graph_from_data_frame
+#' @keywords internal
+#'
+find_loops <- function(links_consensus) {
+
+  # build undirected & find the loops (which_multiple) & any cycles (girth)
   gr <- graph_from_data_frame(d = links_consensus[, c("id_case",
                                                       "id_progen")][!is.na((id_progen))],
                               vertices = links_consensus[, "id_case"],
-                              directed = TRUE)
+                              directed = FALSE)
+  loops <- names(V(subgraph.edges(gr, E(gr)[count_multiple(gr) > 1])))
+  loops <- as.numeric(c(loops, names(girth(gr)$circle)))
+
+  # Get the chain membership
   V(gr)$membership <- components(gr)$membership
   membership <- data.table(membership = as.numeric(vertex_attr(gr, "membership")),
                            id_case = as.numeric(vertex_attr(gr, "name")))
+  links_consensus <- links_consensus[membership, on = "id_case"]
 
-  # This also accounts for indirect loops which you might get given really large uncertainty!
-  links_consensus <- links_consensus[membership, on = "id_case"][case_dates, on = "id_case"]
-  links_consensus[, c("test", "min_case") := .(sum(is.na(id_progen)),
-                                               min_case = id_case[which.min(symptoms_started)]),
-                  by = "membership"]
+  return(list(links_consensus = links_consensus, membership = membership,
+              loops = loops))
+}
 
-  # option to reassign to second most likely and check loops
-  links_consensus[, id_progen := ifelse(id_case %in% min_case & test == 0,
-                                        NA,
-                                        id_progen)]
-  # set prob to NA!
-  check <- links_consensus[, .(check = sum(is.na(id_progen))), by = "membership"]
+#' Helper function to check for loops
+#'
+#' @param links either the consensus links or a single tree (with
+#'  cols id_case & id_progen)
+#'
+#' @return a vector of case ids which are part of a loop in the tree
+#' @export
+#'
+check_loops <- function(links) {
 
-  if(any(check$check != 1)) {
-    warning("Multiple incursions are linked to the same chain or
-             some chains are lacking an origin: there may be too much uncertainty
-             in your dates to reliably distinguish chains!")
-  }
+  # build undirected & find the loops (which_multiple) & any cycles (girth)
+  gr <- graph_from_data_frame(d = links[, c("id_case",
+                                                      "id_progen")][!is.na((id_progen))],
+                              vertices = links[, "id_case"],
+                              directed = FALSE)
+  loops <- names(V(subgraph.edges(gr, E(gr)[count_multiple(gr) > 1])))
+  loops <- as.numeric(c(loops, names(girth(gr)$circle)))
 
-  return(links_consensus[, -c("membership", "test", "min_case")])
+  return(loops)
 }
 
 #' Build the consensus tree (i.e. the tree with the highest proportion of consensus links)

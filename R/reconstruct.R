@@ -49,7 +49,8 @@ build_tree <- function(id_case,
   }
 
   # build line list with uncertainty
-  t <- date_symptoms +  add_uncertainty(days_uncertain)
+  t <- add_uncertainty(days_uncertain, date_symptoms, id_biter,
+                       id_case, use_known_source)
   case_dt <- data.table(id_case, id_biter, x_coord, y_coord, owned, t, join = t)
   case_dt$type <- "reconstructed" # for tracking whether using known sources or not
 
@@ -74,26 +75,26 @@ build_tree <- function(id_case,
             see `build_known_tree` function.")
     }
 
-    known_tree <- copy(known_tree) # so working on copy specific to sim
+    k_tree <- copy(known_tree) # so working on copy specific to sim
 
-    # get the uncertainty for the simulation
-    known_tree$t <- case_dt$t[match(known_tree$id_case, case_dt$id_case)]
-    known_tree$t_progen <- case_dt$t[match(known_tree$id_progen, case_dt$id_case)]
+    # get the uncertainty for the simulation (this will be the first match)
+    k_tree$t <- case_dt$t[match(k_tree$id_case, case_dt$id_case)]
+    k_tree$t_progen <- case_dt$t[match(k_tree$id_progen, case_dt$id_case)]
 
     # Get their diff for time
-    known_tree[, t_diff := as.numeric(t - t_progen)]
+    k_tree[, t_diff := as.numeric(t - t_progen)]
 
     # fix any that have negative values due to uncertainty (better way?)
-    known_tree$t_diff[known_tree$t_diff <= 0] <- min_time
+    k_tree$t_diff[k_tree$t_diff <= 0] <- min_time
 
     # Deal with multiple id's here (selecting ones that have multiple potential progenitors)
-    known_tree <- select_progenitor(tree = known_tree,
+    k_tree <- select_progenitor(tree = k_tree,
                                     si_fun = si_fun,
                                     dist_fun = dist_fun,
                                     params = params)
 
     # Filter out of progenitor assigment (but not out of the candidate progens!)
-    case_dt <- case_dt[!(id_case %in% known_tree$id_case)]
+    case_dt <- case_dt[!(id_case %in% k_tree$id_case)]
 
   }
 
@@ -115,7 +116,7 @@ build_tree <- function(id_case,
 
   if(use_known_source) {
     # a candidate progenitor cannot be a known secondary case from contact tracing
-    ttree <- ttree[!(known_tree[, .(id_progen = id_case, id_case = id_progen)]),
+    ttree <- ttree[!(k_tree[, .(id_progen = id_case, id_case = id_progen)]),
                    on = c("id_case", "id_progen")]
   }
 
@@ -142,7 +143,7 @@ build_tree <- function(id_case,
 
   ttree <- rbind(incursions, ttree, fill = TRUE)
 
-  if(use_known_source) {  ttree <- rbind(ttree, known_tree, fill = TRUE) }
+  if(use_known_source) {  ttree <- rbind(ttree, k_tree, fill = TRUE) }
   ttree[, incursion := is.na(id_progen)]
 
   return(ttree)
@@ -222,19 +223,54 @@ select_progenitor <- function(tree, si_fun, dist_fun, params) {
 #' @keywords internal
 assign_progen <- function(prob_scaled) {
 
-  cum_scaled <- cumsum(prob_scaled)
+  cumul_scaled <- cumsum(prob_scaled)
   rand_var <- runif(1, 0, 1)
-  ind <- cum_scaled[cum_scaled > rand_var][1]
-  ifelse(cum_scaled == ind, 1L, 0L)
+  ind <- which(cumul_scaled > rand_var)[1]
+  selected <- rep(0L, length(cumul_scaled))
+  selected[ind] <- 1L
 
+  return(selected)
 }
 
 #' Add uncertainty
 #'
 #' @keywords internal
-add_uncertainty <- function(uncertainty){
+add_uncertainty <- function(uncertainty, date_symptoms, id_biter,
+                            id_case, use_known_source, buffer = 7,
+                            max_tries = 100){
 
-  days_offset <- unlist(lapply(uncertainty, sample, size = 1)) * sample(c(-1, 1), length(uncertainty), replace = TRUE)
+  if(any(uncertainty) > 0) {
+
+    days_offset <- unlist(lapply(uncertainty, sample, size = 1))
+    sign <- sample(c(-1, 1), length(uncertainty), replace = TRUE)
+    date_uncertain <- date_symptoms +  days_offset * sign
+    niter <- 0
+
+    if(use_known_source) {
+      date_min <- date_uncertain[match(id_biter, id_case)] + buffer # this will be relative to the first one
+      date_min[is.na(date_min)] <- date_uncertain[is.na(date_min)]
+
+      while(any(date_uncertain < date_min) & niter <= max_tries) {
+        niter <- niter + 1
+        # constrain known biters
+        date_uncertain[date_uncertain < date_min] <- date_min[date_uncertain < date_min]
+
+        # check again
+        date_min <- date_uncertain[match(id_biter, id_case)] + buffer
+        date_min[is.na(date_min)] <- date_uncertain[is.na(date_min)]
+      }
+
+      if(any(date_uncertain < date_min)) {
+        warning("Significant date uncertainty means that some case dates may
+               not line up with known sequence of events from contact tracing!")
+      }
+    }
+
+    return(date_uncertain)
+
+  } else {
+    return(date_symptoms)
+  }
 
 }
 
@@ -334,6 +370,7 @@ boot_trees <- function(id_case,
           .export = exp_funs,
           .packages = exp_pkgs) %dorng% {
             ttree <-
+
               build_tree(id_case = id_case, id_biter = id_biter, y_coord = y_coord,
                          x_coord = x_coord,
                          owned = owned, date_symptoms = date_symptoms,

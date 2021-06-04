@@ -4,7 +4,15 @@
 \alias{add_uncertainty}
 \title{Add uncertainty}
 \usage{
-add_uncertainty(uncertainty)
+add_uncertainty(
+  uncertainty,
+  date_symptoms,
+  id_biter,
+  id_case,
+  use_known_source,
+  buffer = 7,
+  max_tries = 100
+)
 }
 \description{
 Add uncertainty

@@ -53,7 +53,8 @@ library(doParallel)
 
 # simrabid & treerabid
 library(simrabid) # devtools::install_github("mrajeev08/simrabid")
-library(treerabid)
+devtools::load_all()
+#> Error in get(genname, envir = envir) : object 'testthat_print' not found
 ```
 
 First simulate from rabies IBM using `simrabid`:
@@ -126,25 +127,25 @@ system.time({
 }
 )
 #>    user  system elapsed 
-#>   5.043   0.424   5.600
+#>   6.997   0.619   8.673
 
 # I_dt is the line list
 case_dt <- exe$I_dt
 head(case_dt)
 #>    id cell_id row_id progen_id path  x_coord y_coord invalid outbounds
-#> 1:  1    2490   1510        -1    0 676686.6 9802387   FALSE     FALSE
-#> 2:  2    2576   1591         2    0 692973.0 9801766   FALSE     FALSE
-#> 3:  3    2576   1591         2    0 692924.9 9801737   FALSE     FALSE
-#> 4:  4    2576   1591         3    0 692992.1 9801873   FALSE     FALSE
-#> 5:  5    4302   3109        -1    0 668686.6 9776387   FALSE     FALSE
-#> 6:  6    4100   2914        -1    0 676686.6 9779387   FALSE     FALSE
+#> 1:  1     384     74        -1    0 670686.6 9832387   FALSE     FALSE
+#> 2:  2     384     74         1    0 670895.0 9832629   FALSE     FALSE
+#> 3:  3     384     74         1    0 670685.4 9832392   FALSE     FALSE
+#> 4:  4    5291   3995         2    0 677648.3 9762503   FALSE     FALSE
+#> 5:  5     314     44         3    0 670437.9 9833351   FALSE     FALSE
+#> 6:  6    2687   1687         5    0 664043.7 9799651   FALSE     FALSE
 #>    t_infected contact infected t_infectious month detect_prob detected
-#> 1:   0.000000       N     TRUE      7.00000     1   0.9159249        1
-#> 2:   9.657419       S     TRUE     10.00000     2   0.9377713        1
-#> 3:  10.000000       S     TRUE     11.73716     2   0.9377713        1
-#> 4:  11.737164       S     TRUE     18.90483     4   0.8987660        1
-#> 5:   0.000000       N     TRUE     12.14286     3   0.9223063        1
-#> 6:   0.000000       N     TRUE     18.71429     4   0.8987660        0
+#> 1:   0.000000       N     TRUE     3.857143     0   0.9194758        1
+#> 2:   3.857143       S     TRUE     5.254459     1   0.8939988        1
+#> 3:   3.857143       S     TRUE     4.777159     1   0.8939988        1
+#> 4:   3.857143       S     TRUE     4.389586     1   0.8939988        1
+#> 5:   4.777159       S     TRUE     6.637168     1   0.8939988        1
+#> 6:   4.428571       S     TRUE     5.654184     1   0.8939988        1
 ```
 
 Reconstruct bootstrapped trees (per Hampson et al. 2009) & prune any
@@ -172,6 +173,7 @@ ttrees <-
              N = 1, 
              seed = 105)
 #> Warning: executing %dopar% sequentially: no parallel backend registered
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
 ttrees2 <- 
   boot_trees(id_case = case_dt$id,
              id_biter = 0, # we don't know the progenitors 
@@ -188,6 +190,7 @@ ttrees2 <-
              cutoff = 0.95,
              N = 1, 
              seed = 105)
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
 
 # Are these reproducible?
 identical(ttrees, ttrees2)
@@ -213,8 +216,207 @@ system.time({
                    N = 100, 
                    seed = 105)
 })
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
+
+#> Warning in any(uncertainty): coercing argument of type 'double' to logical
 #>    user  system elapsed 
-#>   1.979   0.063   2.108
+#>   2.196   0.065   2.752
 ```
 
 ## Visualizing trees
@@ -229,6 +431,9 @@ links_gr <- graph_from_data_frame(d = data.frame(from = links_all$id_progen,
 #> `d' `NA' elements were replaced with string "NA"
 E(links_gr)$prob <- links_all$prob
 V(links_gr)$membership <- components(links_gr)$membership
+
+# Get rid of the NA links (i.e. differentiating incursions)
+links_gr <- delete_vertices(links_gr, names(V(links_gr)) %in% "NA")
 
 set.seed(179)
 ggraph(links_gr, layout = "kk") + 
