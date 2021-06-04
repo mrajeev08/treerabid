@@ -35,7 +35,7 @@ devtools::install_github("mrajeev08/treerabid")
 ```
 
 Dependencies: `data.table`, `foreach`, `doRNG`, `parallel`
-Suggests: `ggraph`, `ggplot2`, `igraph`,
+Suggests: `ggraph`, `ggplot2`, `igraph`
 
 ## Example using `treerabid` + `simrabid`
 

@@ -239,7 +239,7 @@ add_uncertainty <- function(uncertainty, date_symptoms, id_biter,
                             id_case, use_known_source, buffer = 7,
                             max_tries = 100){
 
-  if(any(uncertainty) > 0) {
+  if(any(uncertainty > 0)) {
 
     days_offset <- unlist(lapply(uncertainty, sample, size = 1))
     sign <- sample(c(-1, 1), length(uncertainty), replace = TRUE)
