@@ -23,7 +23,8 @@ boot_trees(
   N = 1,
   seed = 1245,
   exp_funs = NULL,
-  exp_pkgs = c("data.table", "treerabid")
+  exp_pkgs = c("data.table", "treerabid"),
+  ncores = parallel::detectCores() - 1
 )
 }
 \arguments{
