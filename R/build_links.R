@@ -10,8 +10,13 @@
 build_all_links <- function(ttrees, N) {
 
   links_all <- ttrees[, .(links = .N,
+<<<<<<< HEAD
                           t_diff_median_days = median(t_diff),
                           dist_diff_meters = median(dist_diff)),
+=======
+                          t_diff_median = median(t_diff),
+                          dist_diff = median(dist_diff)),
+>>>>>>> 57c51cf975722fe7b76e84441f8d926594f58fa4
                       by = c("id_case", "id_progen")][, prob := links/N]
 
   return(links_all)
