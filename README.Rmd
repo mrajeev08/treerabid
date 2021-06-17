@@ -60,8 +60,7 @@ library(doParallel)
 
 # simrabid & treerabid
 library(simrabid) # devtools::install_github("mrajeev08/simrabid")
-devtools::load_all()
-
+library(treerabid)
 ```
 
 
