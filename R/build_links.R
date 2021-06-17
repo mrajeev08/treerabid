@@ -340,7 +340,6 @@ find_lineages <- function(gr, links, known_progens) {
 #' @return
 #' @export
 #'
-#' @examples
 check_lineages <- function(links) {
 
   # Filter to chains that have multiple lineages per chain
