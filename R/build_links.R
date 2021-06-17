@@ -290,12 +290,12 @@ find_lineages <- function(gr, links, known_progens) {
   # filter out same case ids and same lineages
   reassign <- reassign[id_case != i.id_case & lineage != i.lineage]
 
-  # get unique pairs only
-  reassign <- reassign[!duplicated(t(apply(reassign[,
-                                                    c("id_case", "i.id_case")],
-                                           1, sort))), ]
-
   if(nrow(reassign) > 0) {
+
+    # get unique pairs only
+    reassign <- reassign[!duplicated(t(apply(reassign[,
+                                                      c("id_case", "i.id_case")],
+                                             1, sort))), ]
 
     pths <- get_edge_dt(gr, lins = reassign)
 
