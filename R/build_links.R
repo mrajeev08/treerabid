@@ -105,42 +105,38 @@ build_consensus_links <- function(links_all,
     # update and recheck for to_fix
     list2env(find_links_to_fix(links_consensus, fix_loops, case_dates,
                                known_progens), envir = environment())
+  }
 
-    if(niter == max_tries) {
-      # update final membership & check loops if still some unresolved
-      gr <- get_gr(links_consensus)
-      loops <- check_loops(links_consensus)
+  if(niter == max_tries) {
+    # update final membership & check loops if still some unresolved
+    gr <- get_gr(links_consensus)
+    loops <- check_loops(links_consensus)
 
-      # Get the chain membership
-      V(gr)$membership <- components(gr)$membership
-      membership <- data.table(membership = as.numeric(vertex_attr(gr, "membership")),
-                               id_case = as.numeric(vertex_attr(gr, "name")))
-      links_consensus <- links_consensus[membership, on = "id_case"]
-      lins_to_fix <- check_lineages(links_consensus)
-      loops <- check_loops(links_consensus)
+    # Get the chain membership
+    V(gr)$membership <- components(gr)$membership
+    membership <- data.table(membership = as.numeric(vertex_attr(gr, "membership")),
+                             id_case = as.numeric(vertex_attr(gr, "name")))
+    links_consensus <- links_consensus[membership, on = "id_case"]
+    lins_to_fix <- check_lineages(links_consensus)
+    loops <- check_loops(links_consensus)
 
-      links_consensus[, membership := NULL]
+    links_consensus[, membership := NULL]
 
-    } else {
-      lins_to_fix <- loops <- NULL
+    # Test to make sure no more to_fix and warn if there are!
+    if(length(loops) > 0) {
+
+      warning(
+        "There are still loops in the transmission tree, indicating that case date
+        uncertainty may be too high to indentify introductions and differentiate chains.
+        You can also try increasing the value of max_tries.")
+
     }
-  }
 
-
-  # Test to make sure no more to_fix and warn if there are!
-  if(length(loops) > 0) {
-
-    warning(
-      "There are still loops in the transmission tree, indicating that case date
-      uncertainty may be too high to indentify introductions and differentiate chains.
-      You can also try increasing the value of max_tries.")
-
-  }
-
-  if(nrow(lins_to_fix > 0)) {
-    warning(
-      "Couldn't completely resolve tree to phylogeny, try increasing the number
-      of bootstrapped trees or max_tries.")
+    if(nrow(lins_to_fix > 0)) {
+      warning(
+        "Couldn't completely resolve tree to phylogeny, try increasing the number
+        of bootstrapped trees or max_tries.")
+    }
   }
 
   none_found <- sum(is.na(links_consensus$prob))
