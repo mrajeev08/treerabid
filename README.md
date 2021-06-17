@@ -53,8 +53,7 @@ library(doParallel)
 
 # simrabid & treerabid
 library(simrabid) # devtools::install_github("mrajeev08/simrabid")
-devtools::load_all()
-#> Error in get(genname, envir = envir) : object 'testthat_print' not found
+library(treerabid)
 ```
 
 First simulate from rabies IBM using `simrabid`:
@@ -127,25 +126,25 @@ system.time({
 }
 )
 #>    user  system elapsed 
-#>   4.937   0.417   5.526
+#>   5.519   0.505   6.119
 
 # I_dt is the line list
 case_dt <- exe$I_dt
 head(case_dt)
 #>    id cell_id row_id progen_id path  x_coord y_coord invalid outbounds
-#> 1:  1    4038   2858         1    0 684947.9 9779932   FALSE     FALSE
-#> 2:  2    4108   2922         1    0 684816.5 9779009   FALSE     FALSE
-#> 3:  3    4108   2922         1    0 684679.2 9779345   FALSE     FALSE
-#> 4:  4    4108   2922         1    0 684609.9 9779400   FALSE     FALSE
-#> 5:  5    4108   2922         1    0 684479.0 9779641   FALSE     FALSE
-#> 6:  6    4246   3054         1    0 682803.2 9777702   FALSE     FALSE
+#> 1:  1    4770   3569         1    0 646572.8 9768948   FALSE     FALSE
+#> 2:  2    4771   3570         1    0 647683.1 9769405   FALSE     FALSE
+#> 3:  3    4771   3570         1    0 647907.0 9769365   FALSE     FALSE
+#> 4:  4    4936   3724         4    0 673186.3 9766966   FALSE     FALSE
+#> 5:  5    4770   3569         1    0 646557.5 9768968   FALSE     FALSE
+#> 6:  6    4840   3635         1    0 646752.4 9768735   FALSE     FALSE
 #>    t_infected contact infected t_infectious month detect_prob detected
-#> 1:   1.285714       S     TRUE     2.893107     0   0.9190460        1
-#> 2:   1.285714       S     TRUE     4.297382     1   0.8772302        1
-#> 3:   1.285714       S     TRUE     5.775876     1   0.8772302        1
-#> 4:   1.285714       S     TRUE     9.082592     2   0.9257599        1
-#> 5:   1.285714       S     TRUE     2.000000     0   0.9190460        1
-#> 6:   1.285714       S     TRUE     3.850756     0   0.9190460        0
+#> 1:   3.714286       S     TRUE     6.212036     1   0.8720671        1
+#> 2:   3.714286       S     TRUE     7.292879     1   0.8720671        1
+#> 3:   3.714286       S     TRUE     4.883252     1   0.8720671        1
+#> 4:   4.857143       S     TRUE    11.553531     2   0.9570016        1
+#> 5:   6.212036       S     TRUE    10.962706     2   0.9570016        1
+#> 6:   6.212036       S     TRUE     9.416469     2   0.9570016        1
 ```
 
 Reconstruct bootstrapped trees (per Hampson et al. 2009) & prune any
@@ -215,7 +214,7 @@ system.time({
                    seed = 105)
 })
 #>    user  system elapsed 
-#>   2.350   0.216   2.782
+#>   2.956   0.411   3.850
 ```
 
 ## Visualizing trees
