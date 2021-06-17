@@ -9,7 +9,11 @@
 #'
 build_all_links <- function(ttrees, N) {
 
-  links_all <- ttrees[, .(links = .N), by = c("id_case", "id_progen")][, prob := links/N]
+  links_all <- ttrees[, .(links = .N,
+                          t_diff_median = median(t_diff),
+                          dist_diff = median(dist_diff)),
+                      by = c("id_case", "id_progen")][, prob := links/N]
+
   return(links_all)
 
 }
