@@ -31,7 +31,6 @@ build_all_links <- function(ttrees, N) {
 #'  or by breaking and replacing
 #'  links in the loop randomly (fix_loops = "random").
 #' @param known_progens a numeric vector of case ids for which progenitors are known
-#' @param max_tries number of times to iterate through and break loops/inconsistent lineage assignments
 #'
 #' @return a data.table with the case pairs most often linked in transmission tree and their
 #'  probability (i.e. prop of times a given case was selected as a progenitor)
@@ -41,10 +40,10 @@ build_consensus_links <- function(links_all,
                                   case_dates = NULL,
                                   lineages = NULL,
                                   known_progens = NULL,
-                                  fix_loops = c("by_date", "random"),
-                                  max_tries = 100) {
+                                  fix_loops = c("by_date", "random")) {
 
   fix_loops <- match.arg(fix_loops)
+
   # Get the consensus links
   links_consensus <- links_all[links_all[, .I[which.max(links)], by = c("id_case")]$V1] # returns first max
 
@@ -54,89 +53,85 @@ build_consensus_links <- function(links_all,
 
   links_consensus <- links_consensus[lineages, on = "id_case"]
 
-  # spit out the links, the update consensus links, and the updated membership
+  # spit out the links to fix and the updated membership
   list2env(find_links_to_fix(links_consensus, fix_loops, case_dates,
                              known_progens), envir = environment())
-  niter <- 0
 
-  # option to reassign to next likely and check loops
-  while(length(to_fix) > 0 & niter < max_tries) {
+  # set links to fix to NA
+  links_consensus[id_case %in% to_fix]$id_progen <- NA
+  nfixes <- length(to_fix)
 
-    niter <- niter + 1
+  if(nfixes > 0) {
 
-    # Join up links with updated membership
-    links_all <- membership[links_all, on = "id_case"]
-    setnames(membership, c("membership", "id_case", "lineage"),
-             c("membership_progen", "id_progen", "lineage_progen"))
-    links_all <- membership[links_all, on = "id_progen"]
-    links_all[, membership_progen := ifelse(is.na(membership_progen), 0,
-                                            membership_progen)]
-    links_all[, lineage_progen := ifelse(is.na(lineage_progen), 0,
-                                         lineage_progen)]
+    pb  <- txtProgressBar(1, nfixes, style = 3)
+    rfixes <- sample(nfixes, nfixes) # fix in random order
 
-    # For those that have no incursions and are also the minimum case replace
-    # with the next most likely progen, that is not already in the current chains
-    candidate_links <- links_all[id_case %in% to_fix & membership != membership_progen]
+    for(i in rfixes) {
 
-    # Also filter to those that in chain with same (or totally unsampled lineages)
-    candidate_links <- candidate_links[lineage * lineage_progen %in% c(lineage^2, 0)]
+      # Join up links with updated membership
+      links_all <- membership[links_all, on = "id_case"]
+      setnames(membership, c("membership", "id_case", "lineage"),
+               c("membership_progen", "id_progen", "lineage_progen"))
+      links_all <- membership[links_all, on = "id_progen"]
+      links_all[, membership_progen := ifelse(is.na(membership_progen), 0,
+                                              membership_progen)]
+      links_all[, lineage_progen := ifelse(is.na(lineage_progen), 0,
+                                           lineage_progen)]
 
-    fixed_links <- candidate_links[candidate_links[, .I[which.max(links)], by = c("id_case")]$V1]
+      # For those that have no incursions and are also the minimum case replace
+      # with the next most likely progen, that is not already in the current chains
+      candidate_links <- links_all[id_case %in% to_fix[i] & membership != membership_progen]
 
-    # if none then set to NA (prob & links)
-    incs <- to_fix[!(to_fix %in% fixed_links$id_case)]
-    set_incs <- links_consensus[id_case %in% incs]
-    set_incs[, c("id_progen", "links", "prob") := .(NA, NA, NA)]
+      # Also filter to those that in chain with same (or totally unsampled lineages)
+      candidate_links <- candidate_links[lineage * lineage_progen == 0 | lineage * lineage_progen == lineage^2]
+      fixed_links <- candidate_links[candidate_links[, .I[which.max(links)], by = c("id_case")]$V1]
 
-    # bind them together
-    links_consensus<-
-      rbindlist(list(links_consensus[!(id_case %in% to_fix)],
-                     fixed_links, set_incs),
-                fill = TRUE)
+      # if none then set to NA (prob & links)
+      incs <- ifelse(nrow(fixed_links) == 0, to_fix[i], 0)
+      set_incs <- links_consensus[id_case %in% incs]
+      set_incs[, c("id_progen", "links", "prob") := .(NA, NA, NA)]
 
-    # clean links_consensus & links_all
-    links_consensus[, c("membership", "membership_progen", "lineage", "lineage_progen") := NULL]
-    links_all[, c("membership", "membership_progen", "lineage", "lineage_progen") := NULL]
+      # bind them together
+      links_consensus<-
+        rbindlist(list(links_consensus[!(id_case %in% to_fix[i])],
+                       fixed_links, set_incs),
+                  fill = TRUE)
 
-    # rejoin with lineages
-    # to deal with issue that only known progenitors were possible for reassignment)
-    links_consensus <- links_consensus[lineages, on = "id_case"]
+      # clean links_consensus & links_all
+      links_consensus[, c("membership", "membership_progen", "lineage", "lineage_progen") := NULL]
+      links_all[, c("membership", "membership_progen", "lineage", "lineage_progen") := NULL]
 
-    # update and recheck for to_fix
-    list2env(find_links_to_fix(links_consensus, fix_loops, case_dates,
-                               known_progens), envir = environment())
+      # rejoin with lineages
+      # to deal with issue that only known progenitors were possible for reassignment)
+      links_consensus <- links_consensus[lineages, on = "id_case"]
+
+      # update membership
+      membership <- get_membership(links_consensus)
+
+      setTxtProgressBar(pb, i)
+    }
   }
 
-  if(niter == max_tries) {
-    # update final membership & check loops if still some unresolved
-    gr <- get_gr(links_consensus)
-    loops <- check_loops(links_consensus)
+  # update final membership & check loops if still some unresolved
+  links_consensus <- links_consensus[membership[, -"lineage"], on = "id_case"]
+  lins_to_fix <- check_lineages(links_consensus)
+  loops <- check_loops(links_consensus)
 
-    # Get the chain membership
-    V(gr)$membership <- components(gr)$membership
-    membership <- data.table(membership = as.numeric(vertex_attr(gr, "membership")),
-                             id_case = as.numeric(vertex_attr(gr, "name")))
-    links_consensus <- links_consensus[membership, on = "id_case"]
-    lins_to_fix <- check_lineages(links_consensus)
-    loops <- check_loops(links_consensus)
+  links_consensus[, membership := NULL]
 
-    links_consensus[, membership := NULL]
+  # Test to make sure no more to_fix and warn if there are!
+  if(length(loops) > 0) {
 
-    # Test to make sure no more to_fix and warn if there are!
-    if(length(loops) > 0) {
+    warning(
+      "There are still loops in the transmission tree, indicating that case date
+        uncertainty may be too high to indentify introductions and differentiate chains.")
 
-      warning(
-        "There are still loops in the transmission tree, indicating that case date
-        uncertainty may be too high to indentify introductions and differentiate chains.
-        You can also try increasing the value of max_tries.")
+  }
 
-    }
-
-    if(nrow(lins_to_fix > 0)) {
-      warning(
-        "Couldn't completely resolve tree to phylogeny, try increasing the number
+  if(nrow(lins_to_fix > 0)) {
+    warning(
+      "Couldn't completely resolve tree to phylogeny, try increasing the number
         of bootstrapped trees or max_tries.")
-    }
   }
 
   none_found <- sum(is.na(links_consensus$prob))
@@ -146,10 +141,11 @@ build_consensus_links <- function(links_all,
       paste0(
         none_found,
         " cases were assigned no progenitor because all potential progenitors
-        were filtered out by fixing loops or resolving to a phylogeny. If appropriate,
-        you might consider increasing the number of bootstrapped trees to make sure
-        this is not an artifact of sampling."))
+          were filtered out by fixing loops or resolving to a phylogeny. If appropriate,
+          you might consider increasing the number of bootstrapped trees to make sure
+          this is not an artifact of sampling."))
   }
+
 
   # Clean up the data.table
   return(links_consensus)
@@ -217,6 +213,7 @@ find_links_to_fix <- function(links_consensus, fix_loops, case_dates,
 
   # Update links consensus and get new membership
   links_consensus[id_case %in% to_fix]$id_progen <- NA
+
   membership <- get_membership(links_consensus)
 
   return(list(membership = membership, to_fix = to_fix))
@@ -355,12 +352,15 @@ get_edge_dt <- function(gr, lins) {
 
   sps <-
     suppressWarnings(
-      shortest_paths(gr,
-                     from = as.character(lins$id_case),
-                     to = as.character(lins$i.id_case),  mode = "all",
-                     output = "epath")$epath
+      lapply(seq_len(nrow(lins)),
+             function(x) {
+               shortest_paths(gr,
+                       from = as.character(lins$id_case[x]),
+                       to = as.character(lins$i.id_case[x]),  mode = "all",
+                       output = "epath")$epath[[1]]
+               }
       )
-
+    )
   sps <- Filter(function(x) length(x) > 0, sps)
 
   if(length(sps) > 0) {
@@ -409,17 +409,28 @@ get_membership <- function(links) {
 #'
 #' @param links_consensus output from `build_consensus_links`
 #' @param ttrees  bootstrapped trees from `boot_trees`
+#' @type how to summarize the trees, either majority rule or Maximum clade
+#'  credibility-ish
 #'
 #' @return a data.table with the consensus tree (with score for each link,
 #'  1 if the consensus link, 0 if not.
 #' @export
 #'
-build_consensus_tree <- function(links_consensus, ttrees) {
+build_consensus_tree <- function(links_consensus, ttrees, links_all = NULL,
+                                 type = c("majority", "mcc")) {
+  type <- match.arg(type)
 
-  sim_scores <- ttrees[links_consensus, on = c("id_case", "id_progen")][, score := 1][, .(score = sum(score)), by = "sim"]
+  if(type == "majority") {
+    sim_scores <- ttrees[links_consensus, on = c("id_case", "id_progen")][, score := 1][, .(score = sum(score)), by = "sim"]
+    } else {
+    # Join with links all and take the product of those
+    tree_consensus <- links_all[ttrees, on = c("id_progen", "id_case")]
+    sim_scores <- tree_consensus[, .(score = prod(prob, na.rm = TRUE)),
+                                 by = "sim"]
+  }
 
+  tree_consensus <- tree_consensus[sim == sim_scores$sim[which.max(sim_scores$score)]]
   best_pairs <- paste0(links_consensus$id_case, "_", links_consensus$id_progen)
-  tree_consensus <- ttrees[sim == sim_scores$sim[which.max(sim_scores$score)]]
   tree_consensus[, score := fifelse(paste0(id_case, "_", id_progen) %in% best_pairs, 1, 0)]
 
   return(tree_consensus)

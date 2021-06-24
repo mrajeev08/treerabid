@@ -9,8 +9,7 @@ build_consensus_links(
   case_dates = NULL,
   lineages = NULL,
   known_progens = NULL,
-  fix_loops = c("by_date", "random"),
-  max_tries = 100
+  fix_loops = c("by_date", "random")
 )
 }
 \arguments{
@@ -29,8 +28,6 @@ who-infected-whom), the loops can either be broken by reassigning the progenitor
 of the case with the earliest case date in the loop (fix_loops = "by_date", the default).
 or by breaking and replacing
 links in the loop randomly (fix_loops = "random").}
-
-\item{max_tries}{number of times to iterate through and break loops/inconsistent lineage assignments}
 }
 \value{
 a data.table with the case pairs most often linked in transmission tree and their

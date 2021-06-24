@@ -4,7 +4,12 @@
 \alias{build_consensus_tree}
 \title{Build the consensus tree (i.e. the tree with the highest proportion of consensus links)}
 \usage{
-build_consensus_tree(links_consensus, ttrees)
+build_consensus_tree(
+  links_consensus,
+  ttrees,
+  links_all = NULL,
+  type = c("majority", "mcc")
+)
 }
 \arguments{
 \item{links_consensus}{output from \code{build_consensus_links}}
