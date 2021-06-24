@@ -53,17 +53,18 @@ build_consensus_links <- function(links_all,
 
   links_consensus <- links_consensus[lineages, on = "id_case"]
 
-  # spit out the links to fix and the updated membership
-  list2env(find_links_to_fix(links_consensus, fix_loops, case_dates,
+  # First fix the loops
+  list2env(find_loops_to_fix(links_consensus, fix_loops, case_dates,
                              known_progens), envir = environment())
 
   # set links to fix to NA
-  links_consensus[id_case %in% to_fix]$id_progen <- NA
-  nfixes <- length(to_fix)
+  links_consensus[id_case %in% loops_to_fix]$id_progen <- NA
+  nfixes <- length(loops_to_fix)
 
   if(nfixes > 0) {
 
     pb  <- txtProgressBar(1, nfixes, style = 3)
+    message("Fixing loops:")
     rfixes <- sample(nfixes, nfixes) # fix in random order
     pr <- 0
     for(i in rfixes) {
@@ -80,20 +81,81 @@ build_consensus_links <- function(links_all,
 
       # For those that have no incursions and are also the minimum case replace
       # with the next most likely progen, that is not already in the current chains
-      candidate_links <- links_all[id_case %in% to_fix[i] & membership != membership_progen]
+      candidate_links <- links_all[id_case %in% loops_to_fix[i] & membership != membership_progen]
 
       # Also filter to those that in chain with same (or totally unsampled lineages)
       candidate_links <- candidate_links[lineage * lineage_progen == 0 | lineage * lineage_progen == lineage^2]
       fixed_links <- candidate_links[candidate_links[, .I[which.max(links)], by = c("id_case")]$V1]
 
       # if none then set to NA (prob & links)
-      incs <- ifelse(nrow(fixed_links) == 0, to_fix[i], 0)
+      incs <- ifelse(nrow(fixed_links) == 0, loops_to_fix[i], 0)
       set_incs <- links_consensus[id_case %in% incs]
       set_incs[, c("id_progen", "links", "prob") := .(NA, NA, NA)]
 
       # bind them together
       links_consensus<-
-        rbindlist(list(links_consensus[!(id_case %in% to_fix[i])],
+        rbindlist(list(links_consensus[!(id_case %in% loops_to_fix[i])],
+                       fixed_links, set_incs),
+                  fill = TRUE)
+
+      # clean links_consensus & links_all
+      links_consensus[, c("membership", "membership_progen", "lineage", "lineage_progen") := NULL]
+      links_all[, c("membership", "membership_progen", "lineage", "lineage_progen") := NULL]
+
+      # rejoin with lineages
+      # to deal with issue that only known progenitors were possible for reassignment)
+      links_consensus <- links_consensus[lineages, on = "id_case"]
+
+      # update membership
+      membership <- get_membership(links_consensus)
+
+      setTxtProgressBar(pb, pr)
+    }
+  }
+
+  # Then fix the lineages
+  list2env(find_lins_to_fix(links_consensus, fix_loops, case_dates,
+                             known_progens), envir = environment())
+  browser()
+  # set links to fix to NA
+  links_consensus[id_case %in% lins_to_fix]$id_progen <- NA
+  nfixes <- length(lins_to_fix)
+
+  if(nfixes > 0) {
+
+    pb  <- txtProgressBar(1, nfixes, style = 3)
+    message("Fixing mismatched lineages:")
+
+    rfixes <- sample(nfixes, nfixes) # fix in random order
+    pr <- 0
+    for(i in rfixes) {
+      pr <- pr + 1
+      # Join up links with updated membership
+      links_all <- membership[links_all, on = "id_case"]
+      setnames(membership, c("membership", "id_case", "lineage"),
+               c("membership_progen", "id_progen", "lineage_progen"))
+      links_all <- membership[links_all, on = "id_progen"]
+      links_all[, membership_progen := ifelse(is.na(membership_progen), 0,
+                                              membership_progen)]
+      links_all[, lineage_progen := ifelse(is.na(lineage_progen), 0,
+                                           lineage_progen)]
+
+      # For those that have no incursions and are also the minimum case replace
+      # with the next most likely progen, that is not already in the current chains
+      candidate_links <- links_all[id_case %in% lins_to_fix[i] & membership != membership_progen]
+
+      # Also filter to those that in chain with same (or totally unsampled lineages)
+      candidate_links <- candidate_links[lineage * lineage_progen == 0 | lineage * lineage_progen == lineage^2]
+      fixed_links <- candidate_links[candidate_links[, .I[which.max(links)], by = c("id_case")]$V1]
+
+      # if none then set to NA (prob & links)
+      incs <- ifelse(nrow(fixed_links) == 0, lins_to_fix[i], 0)
+      set_incs <- links_consensus[id_case %in% incs]
+      set_incs[, c("id_progen", "links", "prob") := .(NA, NA, NA)]
+
+      # bind them together
+      links_consensus<-
+        rbindlist(list(links_consensus[!(id_case %in% lins_to_fix[i])],
                        fixed_links, set_incs),
                   fill = TRUE)
 
@@ -151,8 +213,7 @@ build_consensus_links <- function(links_all,
   return(links_consensus)
 }
 
-
-#' Internal function for finding loops and mismatched lineages to fix
+#' Internal function for finding loops to fix
 #'
 #' @param links_consensus consensus links build within build_consensus_links function
 #' @inheritParams build_consensus_links
@@ -163,7 +224,7 @@ build_consensus_links <- function(links_all,
 #'  vertex_attr graph_from_data_frame
 #' @keywords internal
 #'
-find_links_to_fix <- function(links_consensus, fix_loops, case_dates,
+find_loops_to_fix <- function(links_consensus, fix_loops, case_dates,
                               known_progens) {
 
   # build undirected & find the loops (which_multiple) & any cycles (girth)
@@ -200,7 +261,41 @@ find_links_to_fix <- function(links_consensus, fix_loops, case_dates,
 
   # Find the minimum selector (either by case date or randomly select link to break)
   loops_to_fix <- loops_to_fix[loops_to_fix[, .I[which.min(selector)],
-                          by = c("membership")]$V1]$id_case
+                                            by = c("membership")]$V1]$id_case
+
+  loops_to_fix <- as.numeric(unique(loops_to_fix))
+
+  # Update links consensus and get new membership
+  links_consensus[id_case %in% loops_to_fix]$id_progen <- NA
+
+  membership <- get_membership(links_consensus)
+
+  return(list(membership = membership, loops_to_fix = loops_to_fix))
+}
+
+
+#' Internal function for finding mismatched lineages to fix
+#'
+#' @param links_consensus consensus links build within build_consensus_links function
+#' @inheritParams build_consensus_links
+#'
+#' @return a numeric vector of case ids for which links should be reassigned
+#'
+#' @importFrom igraph V subgraph.edges E count_multiple girth components
+#'  vertex_attr graph_from_data_frame
+#' @keywords internal
+#'
+find_lins_to_fix <- function(links_consensus, fix_loops, case_dates,
+                             known_progens) {
+
+  # build undirected & find the loops (which_multiple) & any cycles (girth)
+  gr <- get_gr(links_consensus)
+
+  # Get the chain membership
+  V(gr)$membership <- components(gr)$membership
+  membership <- data.table(membership = as.numeric(vertex_attr(gr, "membership")),
+                           id_case = as.numeric(vertex_attr(gr, "name")))
+  links_consensus <- links_consensus[membership, on = "id_case"]
 
   # Resolve the phylogeny
   if(length(unique(links_consensus[lineage != 0]$lineage)) > 1) {
@@ -209,14 +304,14 @@ find_links_to_fix <- function(links_consensus, fix_loops, case_dates,
     lins_to_fix <- NULL
   }
 
-  to_fix <- as.numeric(unique(c(loops_to_fix, lins_to_fix)))
+  lins_to_fix <- as.numeric(unique(lins_to_fix))
 
   # Update links consensus and get new membership
-  links_consensus[id_case %in% to_fix]$id_progen <- NA
+  links_consensus[id_case %in% lins_to_fix]$id_progen <- NA
 
   membership <- get_membership(links_consensus)
 
-  return(list(membership = membership, to_fix = to_fix))
+  return(list(membership = membership, lins_to_fix = lins_to_fix))
 }
 
 #' Helper function to get graph from links
