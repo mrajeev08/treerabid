@@ -65,9 +65,9 @@ build_consensus_links <- function(links_all,
 
     pb  <- txtProgressBar(1, nfixes, style = 3)
     rfixes <- sample(nfixes, nfixes) # fix in random order
-
+    pr <- 0
     for(i in rfixes) {
-
+      pr <- pr + 1
       # Join up links with updated membership
       links_all <- membership[links_all, on = "id_case"]
       setnames(membership, c("membership", "id_case", "lineage"),
@@ -108,7 +108,7 @@ build_consensus_links <- function(links_all,
       # update membership
       membership <- get_membership(links_consensus)
 
-      setTxtProgressBar(pb, i)
+      setTxtProgressBar(pb, pr)
     }
   }
 
