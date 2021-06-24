@@ -116,7 +116,7 @@ build_consensus_links <- function(links_all,
   # Then fix the lineages
   list2env(find_lins_to_fix(links_consensus, fix_loops, case_dates,
                              known_progens), envir = environment())
-  browser()
+
   # set links to fix to NA
   links_consensus[id_case %in% lins_to_fix]$id_progen <- NA
   nfixes <- length(lins_to_fix)
