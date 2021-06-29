@@ -114,8 +114,7 @@ build_consensus_links <- function(links_all,
   }
 
   # Then fix the lineages
-  list2env(find_lins_to_fix(links_consensus, fix_loops, case_dates,
-                             known_progens), envir = environment())
+  list2env(find_lins_to_fix(links_consensus, known_progens), envir = environment())
 
   # set links to fix to NA
   links_consensus[id_case %in% lins_to_fix]$id_progen <- NA
@@ -285,8 +284,7 @@ find_loops_to_fix <- function(links_consensus, fix_loops, case_dates,
 #'  vertex_attr graph_from_data_frame
 #' @keywords internal
 #'
-find_lins_to_fix <- function(links_consensus, fix_loops, case_dates,
-                             known_progens) {
+find_lins_to_fix <- function(links_consensus, known_progens) {
 
   # build undirected & find the loops (which_multiple) & any cycles (girth)
   gr <- get_gr(links_consensus)
