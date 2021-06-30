@@ -443,30 +443,36 @@ check_lineages <- function(links) {
 #'
 get_edge_dt <- function(gr, lins) {
 
-  sps <-
-    suppressWarnings(
-      lapply(seq_len(nrow(lins)),
-             function(x) {
-               tt <- all_shortest_paths(gr,
-                                        from = as.character(lins$id_case[x]),
-                                        to = as.character(lins$i.id_case[x]),
-                                        mode = "all")$res
-               if(length(tt) > 0) {
-                 out <- rbindlist(lapply(seq_len(length(tt)),
-                                  function(z, ind = x) {
-                                    dt <- as_data_frame(subgraph(gr, tt[[z]]))
-                                    dt$row_id <- ind + (z - 1)/length(tt)
-                                    return(dt)
-                                  }))
-               } else {
-                 out <- data.table(from = 0, to = 0, row_id = 0)[0]
+  if(nrow(lins) > 0) {
+    sps <-
+      suppressWarnings(
+        lapply(seq_len(nrow(lins)),
+               function(x) {
+                 tt <- all_shortest_paths(gr,
+                                          from = as.character(lins$id_case[x]),
+                                          to = as.character(lins$i.id_case[x]),
+                                          mode = "all")$res
+                 if(length(tt) > 0) {
+                   out <- rbindlist(lapply(seq_len(length(tt)),
+                                           function(z, ind = x) {
+                                             dt <- as_data_frame(subgraph(gr, tt[[z]]))
+                                             dt$row_id <- ind + (z - 1)/length(tt)
+                                             return(dt)
+                                           }))
+                 } else {
+                   out <- data.table(from = 0, to = 0, row_id = 0)[0]
+                 }
+
+                 return(out)
+
                }
-
-               return(out)
-
-             }
+        )
       )
-    )
+  } else {
+    sps <- data.table(from = 0, to = 0, row_id = 0)[0]
+
+  }
+
 
   return(rbindlist(sps))
 }
