@@ -8,6 +8,10 @@
 #' @param owned whether animal is owned or not (per Katie, to account for uncertainty in case locations)
 #' @param date_symptoms case date (i.e. date symptoms started)
 #' @param days_uncertain uncertainty in days around case date
+#' @param lineages a data table with two columns, id_case and lineage, designating a lineage
+#'  assignment for each case, defaults to NULL which means trees wont be resolved to a phylogeny
+#' @param all_chains_sequenced whether all chains should have atleast one sequenced case (i.e. if lineage
+#'  assignments exist), default is FALSE which mean some chains may not be linked to any sequenced case
 #' @param exclude_progen boolean of length id_case or 1, if TRUE then case should be excluded as a potential
 #'  progenitor (i.e. if including livestock cases or other species that are dead-end transmissions)
 #' @param use_known_source whether to assign known progenitors from contact tracing data
@@ -34,7 +38,8 @@ build_tree <- function(id_case,
                        owned,
                        date_symptoms,
                        days_uncertain,
-                       lineages,
+                       lineages = NULL,
+                       all_chains_sequenced = FALSE,
                        exclude_progen = FALSE,
                        use_known_source = FALSE,
                        known_tree = NULL,
@@ -89,16 +94,17 @@ build_tree <- function(id_case,
     k_tree$t_diff[k_tree$t_diff <= 0] <- min_time
 
     # Deal with multiple id's here (selecting ones that have multiple potential progenitors)
-    k_tree <- select_progenitor(tree = k_tree,
-                                si_fun = si_fun,
-                                dist_fun = dist_fun,
-                                params = params,
-                                lineages = NULL, k_tree = NULL, incursions = NULL,
-                                known = TRUE)
+    k_tree <- select_progenitor(tree = k_tree, k_tree = NULL, lineages = NULL,
+                                incursions = NULL,
+                                all_chains_sequenced = all_chains_sequenced,
+                                si_fun = si_fun, dist_fun = dist_fun,
+                                params = params, known = TRUE)
 
     # Filter out of progenitor assigment (but not out of the candidate progens!)
     case_dt <- case_dt[!(id_case %in% k_tree$id_case)]
 
+  } else {
+    k_tree <- NULL
   }
 
   # do a inner join to get possible progenitors
@@ -141,10 +147,12 @@ build_tree <- function(id_case,
   }
 
   # This is actually the slow part so limiting # of possibilities speeds things up a lot
-  ttree <- select_progenitor(tree = ttree, si_fun = si_fun, dist_fun = dist_fun,
-                             params = params, lineages = lineages,
-                             k_tree = k_tree, incursions = incursions,
-                             known = FALSE)
+  # Also joins up with known tree and incursions
+  ttree <- select_progenitor(tree = ttree, k_tree = k_tree, lineages = lineages,
+                             incursions = incursions,
+                             all_chains_sequenced = all_chains_sequenced,
+                             si_fun = si_fun, dist_fun = dist_fun,
+                             params = params, known = FALSE)
 
   return(ttree)
 
@@ -199,105 +207,237 @@ build_known_tree <- function(id_case,
 #' Wrapper to select single progenitor in each case
 #'
 #' @param tree the data.table with possible case pairs to select from
+#' @param k_tree the data.table with the known tree (when use_known_source = TRUE,
+#'  NULL otherwise)
+#' @param incursion the data.table with incursions (when prune =TRUE, NULL otherwise)
 #' @inheritParams build_tree
 #'
 #' @return a data.table filtered to the selected case-progenitor pair
 #' @keywords internal
 #'
-select_progenitor <- function(tree, k_tree, incursions, lineages, si_fun, dist_fun,
-                              params, known = FALSE) {
+select_progenitor <- function(tree, lineages, k_tree, incursions,
+                              all_chains_sequenced,
+                              si_fun, dist_fun, params, known = FALSE) {
 
   # probabilities
   si_fun(ttree = tree, params = params)
   dist_fun(ttree = tree, params = params)
+  tree[, source_prob := dist_prob * t_prob][, prob_scale := source_prob/sum(source_prob), by = id_case]
+  ttree <- tree[, selected := assign_progen(prob_scale), by = id_case][selected == 1]
 
-  # bind together known tree & incursions
-  if (!known) {
+  if(!known) {
+    # Bind to incursions & known tree (can be NULL)
+    ttree <- rbindlist(list(incursions, k_tree, ttree), fill = TRUE)
 
-    tree <- rbindlist(list(tree, k_tree, incursions), fill = TRUE)
-    tree[, incursion := is.na(id_progen)]
-    tree <- lineages[tree, on = "id_case"]
+    # Check which ones have mismatched lineages
+    ttree <- ttree[lineages, on = "id_case"]
+    known_progens <- ttree$id_case %in% k_tree$id_case
+    list2env(find_lins_to_fix(ttree, known_progens), envir = environment())
 
-    # sample cases to check paths
-    lins <- lineages[lineage != 0]
-    lins <- data.table(expand.grid(id_case = lins$id_case, i.id_case = lins$id_case))
-    lins <- lineages[, .(id_case = id_case, lineage = lineage)][lins, on = "id_case"]
-    lins <- lineages[, .(i.id_case = id_case, i.lineage = lineage)][lins, on = "i.id_case"]
-    lins <- lins[id_case != i.id_case & lineage != i.lineage]
-    # get unique pairs only
-    lins <- lins[!duplicated(t(apply(lins[, c("id_case", "i.id_case")], 1, sort))), ]
+    # set links to fix to NA
+    ttree[id_case %in% lins_to_fix]$id_progen <- NA
+    nfixes <- length(lins_to_fix)
 
-    # get the unique combos
-    exclude <- c(paste(lins$i.id_case, lins$id_case, sep = "_"),
-                 paste(lins$id_case, lins$i.id_case, sep = "_"))
-    tree[, excl := paste(id_progen, id_case, sep = "_")]
-    tree <- tree[!(excl %in% exclude)]
-    known_progens <- k_tree$id_case
-    gr <- graph_from_data_frame(d = tree[, c("id_case",
-                                             "id_progen")][!is.na((id_progen))],
-                                vertices = lineages,
-                                directed = FALSE)
+    if(nfixes > 0) {
 
-    # this takes loads of time & is semi impossible with a larger graph
-    pths <- get_edge_dt(gr, lins)
+      pb  <- txtProgressBar(1, nfixes, style = 3)
+      message("\n Fixing mismatched lineages:")
 
-    while(nrow(pths) > 0) {
+      rfixes <- sample(nfixes, nfixes) # fix in random order
+      pr <- 0
+      for(i in rfixes) {
+        pr <- pr + 1
+        # Join up links with updated membership
+        tree <- membership[tree, on = "id_case"]
+        setnames(membership, c("membership", "id_case", "lineage"),
+                 c("membership_progen", "id_progen", "lineage_progen"))
+        tree <- membership[tree, on = "id_progen"]
+        tree[, membership_progen := ifelse(is.na(membership_progen), 0,
+                                           membership_progen)]
+        tree[, lineage_progen := ifelse(is.na(lineage_progen), 0,
+                                        lineage_progen)]
 
-      # when you get the paths you lose the directionality
-      # so need to join back up with the actual links
-      check <- rbind(pths[, .(id_progen = as.numeric(from),
-                              id_case = as.numeric(to), row_id)],
-                     pths[, .(id_progen = as.numeric(to),
-                              id_case = as.numeric(from), row_id)])
-      pths <- tree[,
-                   c("id_case", "id_progen")][check,
-                                              on = c("id_case", "id_progen"),
-                                              nomatch = NULL]
+        # For those that have no incursions and are also the minimum case replace
+        # with the next most likely progen, that is not already in the current chains
+        candidate_links <- tree[id_case %in% lins_to_fix[i] & membership != membership_progen]
 
-      # Filter out any edges that are known (from tracing)
-      pths <- pths[!(id_case %in% known_progens)]
+        # Also filter to those that in chain with same (or totally unsampled lineages)
+        candidate_links <- candidate_links[lineage * lineage_progen == 0 | lineage * lineage_progen == lineage^2]
 
-      # Filter to the most frequently selected ones for each row id
-      pths[, freq := .N, by = c("id_case", "id_progen")]
+        # Rescale probabilities & select
+        fixed_links <- candidate_links[, prob_scale := source_prob/sum(source_prob),
+                                       by = id_case][, selected := assign_progen(prob_scale),
+                                                     by = id_case][selected == 1]
 
-      pths[, max_freq := max(freq), by = "row_id"]
-      pths <- pths[freq == max_freq]
+        # if none then set to NA (prob & links)
+        incs <- ifelse(nrow(fixed_links) == 0, lins_to_fix[i], 0)
+        set_incs <- ttree[id_case %in% incs]
+        set_incs[, c("id_progen", "links", "prob") := .(NA, NA, NA)]
 
-      # Select the edge to break: get a random variate to select by
-      pths$selector <- runif(nrow(pths))
+        # bind them together
+        ttree <-
+          rbindlist(list(ttree[!(id_case %in% lins_to_fix[i])],
+                         fixed_links, set_incs),
+                    fill = TRUE)
 
-      # Find the minimum selector
-      to_fix <- pths[pths[, .I[which.min(selector)],
-                          by = c("row_id")]$V1]
-      to_fix <- paste(to_fix$id_progen, to_fix$id_case, sep = "|")
-      gr <- delete.edges(gr, to_fix)
+        # clean ttree & links_all
+        ttree[, c("membership", "membership_progen", "lineage", "lineage_progen") := NULL]
+        tree[, c("membership", "membership_progen", "lineage", "lineage_progen") := NULL]
 
-      # Build graph
-      pths <- get_edge_dt(gr, lins)
+        # rejoin with lineages
+        # to deal with issue that only known progenitors were possible for reassignment)
+        ttree <- ttree[lineages, on = "id_case"]
+
+        # update membership
+        membership <- get_membership(ttree)
+
+        setTxtProgressBar(pb, pr)
+      }
     }
 
-    # get the updated tree
-    pths <- data.table(as_data_frame(gr))
+    # If there are any chains that are not linked to any sampled case link them to
+    # a sampled case if available (filter candidates to ones that have a sampled
+    # case in chain available to them to link and then select a case and random variate)
+    if(all_chains_sequenced) {
 
-    check <- rbind(pths[, .(id_progen = as.numeric(from),
-                            id_case = as.numeric(to))],
-                   pths[, .(id_progen = as.numeric(to),
-                            id_case = as.numeric(from))])
-    tree <- tree[check, on = c("id_case", "id_progen"), nomatch = NULL]
+      # Join up the links with the updated membership
+      fix_chains <- membership[lineage == 0]$membership
+      nfixes <- length(fix_chains)
 
-    # for ones with no progenitor assigned, join with lineage data
-    # and set rest as NA
-    tree <- tree[, lineage := NULL][lineages, on = "id_case"]
+      if(nfixes > 0) {
 
+        rfixes <- sample(nfixes, nfixes) # fix in random order
+
+        for(i in rfixes) {
+
+          # Join up links with updated membership
+          tree <- membership[tree, on = "id_case"]
+          setnames(membership, c("membership", "id_case", "lineage"),
+                   c("membership_progen", "id_progen", "lineage_progen"))
+          tree <- membership[tree, on = "id_progen"]
+          tree[, membership_progen := ifelse(is.na(membership_progen), 0,
+                                             membership_progen)]
+          tree[, lineage_progen := ifelse(is.na(lineage_progen), 0,
+                                          lineage_progen)]
+
+          # For those that have no incursions and are also the minimum case replace
+          # with the next most likely progen, that is not already in the current chains
+          candidate_links <- tree[membership %in% fix_chains[i] & membership != membership_progen]
+
+          if(nrow(candidate_links) > 0) {
+            # Select one case from this chain
+            select_case <- sample(unique(candidate_links$id_case), 1)
+            candidate_links <- candidate_links[id_case == select_case]
+            # filter to progens in sample chain
+            candidate_links <- candidate_links[lineage_progen != 0]
+          }
+
+          if(nrow(candidate_links) > 0) {
+            # Rescale probabilities & select
+            fixed_links <- candidate_links[, prob_scale := source_prob/sum(source_prob),
+                                           by = id_case][, selected := assign_progen(prob_scale),
+                                                         by = id_case][selected == 1]
+            # bind them together
+            ttree <-
+              rbindlist(list(ttree[!(id_case %in% lins_to_fix[i])],
+                             fixed_links, set_incs),
+                        fill = TRUE)
+
+          }
+
+          # clean links_consensus & links_all
+          ttree[, c("membership", "membership_progen", "lineage", "lineage_progen") := NULL]
+          tree[, c("membership", "membership_progen", "lineage", "lineage_progen") := NULL]
+
+          # rejoin with lineages
+          # to deal with issue that only known progenitors were possible for reassignment)
+          ttree <- ttree[lineages, on = "id_case"]
+
+          # update membership
+          membership <- get_membership(ttree)
+        }
+      }
+
+      # Finally join up all the cases within a sample lineage (or try)
+      # Join up the links with the updated membership
+      ttree <- ttree[, lineage := NULL][membership, on = "id_case"]
+      fix_chains <- membership[lineage != 0][, .(check = .N), by = c("membership", "lineage")][, .(check = .N), by = "lineage"]
+      fix_chains <- fix_chains[check > 1]$lineage
+      nfixes <- length(fix_chains)
+
+      if(nfixes > 0) {
+
+        rfixes <- sample(nfixes, nfixes) # fix in random order
+
+        for(i in rfixes) {
+
+          # Join up links with updated membership
+          tree <- membership[tree, on = "id_case"]
+          setnames(membership, c("membership", "id_case", "lineage"),
+                   c("membership_progen", "id_progen", "lineage_progen"))
+          tree <- membership[tree, on = "id_progen"]
+          tree[, membership_progen := ifelse(is.na(membership_progen), 0,
+                                             membership_progen)]
+          tree[, lineage_progen := ifelse(is.na(lineage_progen), 0,
+                                          lineage_progen)]
+
+          # all chains with given lineage & rank them by earliest date
+          to_fix <- ttree[lineage == fix_chains[i] & is.na(id_progen)]
+          ranks <- to_fix[, .(membership, lineage, t)][, rank := order(t)][, -c("t", "lineage")]
+
+          # Filter to candidates to fix
+          candidate_links <- tree[id_case %in% to_fix$id_case]
+
+          # Get the ranks of the case & the progenitor
+          candidate_links <- ranks[candidate_links, on = "membership"]
+          setnames(ranks, c("membership", "rank"),
+                   c("membership_progen", "rank_progen"))
+          candidate_links <- ranks[candidate_links, on = "membership_progen"]
+
+          if(nrow(candidate_links) > 0) {
+            # Select one case from this chain
+            select_case <- sample(unique(candidate_links$id_case), 1)
+            candidate_links <- candidate_links[id_case == select_case]
+            # filter to progens in sample chain
+            candidate_links <- candidate_links[lineage_progen != 0]
+          }
+
+          if(nrow(candidate_links) > 0) {
+            # Rescale probabilities & select
+            fixed_links <- candidate_links[, prob_scale := source_prob/sum(source_prob),
+                                           by = id_case][, selected := assign_progen(prob_scale),
+                                                         by = id_case][selected == 1]
+            # bind them together
+            ttree <-
+              rbindlist(list(ttree[!(id_case %in% lins_to_fix[i])],
+                             fixed_links, set_incs),
+                        fill = TRUE)
+
+          } else {
+            message("No valid sample chains possible to link to the unsampled chain.")
+          }
+
+          # clean links_consensus & links_all
+          ttree[, c("membership", "membership_progen", "lineage", "lineage_progen") := NULL]
+          tree[, c("membership", "membership_progen", "lineage", "lineage_progen") := NULL]
+
+          # rejoin with lineages
+          # to deal with issue that only known progenitors were possible for reassignment)
+          ttree <- ttree[lineages, on = "id_case"]
+
+          # update membership
+          membership <- get_membership(ttree)
+
+        }
+      }
+
+    }
   }
 
+  ttree[, prob_ll := log(source_prob)]
+  ttree[, incursion := is.na(id_progen)]
 
-  # Select progenitors
-  tree[, source_prob := dist_prob * t_prob][, prob_scale := source_prob/sum(source_prob), by = id_case]
-  tree <- tree[, selected := assign_progen(prob_scale), by = id_case][selected == 1]
-  tree[, prob_ll := log(source_prob)]
-
-  return(tree)
+  return(ttree)
 }
 
 #' Assign progenitor
@@ -396,7 +536,8 @@ boot_trees <- function(id_case,
                        owned,
                        date_symptoms, # needs to be in a date class
                        days_uncertain,
-                       lineages,
+                       lineages = NULL,
+                       all_chains_sequenced = FALSE,
                        exclude_progen = FALSE,
                        use_known_source = FALSE,
                        prune = TRUE,
@@ -454,6 +595,8 @@ boot_trees <- function(id_case,
   from <- c(1, chnks[2:ncores] + 1)
   to <- chnks[2:(ncores + 1)]
 
+  browser()
+
   foreach(i = seq_len(length(from)),
           .combine = 'rbind', .options.RNG = seed,
           .export = exp_funs,
@@ -470,10 +613,11 @@ boot_trees <- function(id_case,
                              x_coord = x_coord,
                              owned = owned, date_symptoms = date_symptoms,
                              days_uncertain = days_uncertain,
-                             lineages = lineages,
                              exclude_progen = exclude_progen,
                              use_known_source = use_known_source,
                              known_tree = known_tree,
+                             lineages = lineages,
+                             all_chains_sequenced = all_chains_sequenced,
                              prune = prune,
                              si_fun,
                              dist_fun,
