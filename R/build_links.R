@@ -364,7 +364,7 @@ find_lineages <- function(gr, links, known_progens) {
 
   # Filter to chains that have multiple lineages per chain
   multilins <- links[lineage != 0][, .(check = length(unique(lineage))),
-                                     by = "membership"][check > 1]
+                                   by = "membership"][check > 1]
   reassign <- links[membership %in% multilins$membership]
 
   # Filter to those sampled
@@ -447,31 +447,28 @@ get_edge_dt <- function(gr, lins) {
     suppressWarnings(
       lapply(seq_len(nrow(lins)),
              function(x) {
-               shortest_paths(gr,
-                       from = as.character(lins$id_case[x]),
-                       to = as.character(lins$i.id_case[x]),  mode = "all",
-                       output = "epath")$epath[[1]]
+               tt <- all_shortest_paths(gr,
+                                        from = as.character(lins$id_case[x]),
+                                        to = as.character(lins$i.id_case[x]),
+                                        mode = "all")$res
+               if(length(tt) > 0) {
+                 out <- rbindlist(lapply(seq_len(length(tt)),
+                                  function(z, ind = x) {
+                                    dt <- as_data_frame(subgraph(gr, tt[[z]]))
+                                    dt$row_id <- ind + (z - 1)/length(tt)
+                                    return(dt)
+                                  }))
+               } else {
+                 out <- data.table(from = 0, to = 0, row_id = 0)[0]
                }
+
+               return(out)
+
+             }
       )
     )
-  sps <- Filter(function(x) length(x) > 0, sps)
 
-  if(length(sps) > 0) {
-    out <-
-      rbindlist(
-        lapply(seq_len(length(sps)),
-               function(x) {
-                 dt <- as_data_frame(subgraph.edges(gr, sps[[x]],
-                                                    delete.vertices = FALSE))
-                 dt$row_id <- x
-                 return(dt)
-               }
-        ))
-  } else {
-    out <- data.table(from = 0, to = 0, row_id = 0)[0]
-  }
-
-  return(out)
+  return(rbindlist(sps))
 }
 
 #' Internal function for checking membership of chains AFTER lineage mismatches
@@ -515,7 +512,7 @@ build_consensus_tree <- function(links_consensus, ttrees, links_all = NULL,
 
   if(type == "majority") {
     sim_scores <- ttrees[links_consensus, on = c("id_case", "id_progen")][, score := 1][, .(score = sum(score)), by = "sim"]
-    } else {
+  } else {
     # Join with links all and take the product of those
     tree_consensus <- links_all[ttrees, on = c("id_progen", "id_case")]
     sim_scores <- tree_consensus[, .(score = prod(prob, na.rm = TRUE)),

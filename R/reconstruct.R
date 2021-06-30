@@ -34,6 +34,7 @@ build_tree <- function(id_case,
                        owned,
                        date_symptoms,
                        days_uncertain,
+                       lineages,
                        exclude_progen = FALSE,
                        use_known_source = FALSE,
                        known_tree = NULL,
@@ -91,7 +92,9 @@ build_tree <- function(id_case,
     k_tree <- select_progenitor(tree = k_tree,
                                 si_fun = si_fun,
                                 dist_fun = dist_fun,
-                                params = params)
+                                params = params,
+                                lineages = NULL, k_tree = NULL, incursions = NULL,
+                                known = TRUE)
 
     # Filter out of progenitor assigment (but not out of the candidate progens!)
     case_dt <- case_dt[!(id_case %in% k_tree$id_case)]
@@ -139,12 +142,9 @@ build_tree <- function(id_case,
 
   # This is actually the slow part so limiting # of possibilities speeds things up a lot
   ttree <- select_progenitor(tree = ttree, si_fun = si_fun, dist_fun = dist_fun,
-                             params = params)
-
-  ttree <- rbind(incursions, ttree, fill = TRUE)
-
-  if(use_known_source) {  ttree <- rbind(ttree, k_tree, fill = TRUE) }
-  ttree[, incursion := is.na(id_progen)]
+                             params = params, lineages = lineages,
+                             k_tree = k_tree, incursions = incursions,
+                             known = FALSE)
 
   return(ttree)
 
@@ -204,14 +204,96 @@ build_known_tree <- function(id_case,
 #' @return a data.table filtered to the selected case-progenitor pair
 #' @keywords internal
 #'
-select_progenitor <- function(tree, si_fun, dist_fun, params) {
+select_progenitor <- function(tree, k_tree, incursions, lineages, si_fun, dist_fun,
+                              params, known = FALSE) {
 
   # probabilities
   si_fun(ttree = tree, params = params)
   dist_fun(ttree = tree, params = params)
-  tree[, source_prob := dist_prob * t_prob][, prob_scale := source_prob/sum(source_prob), by = id_case]
+
+  # bind together known tree & incursions
+  if (!known) {
+
+    tree <- rbindlist(list(tree, k_tree, incursions), fill = TRUE)
+    tree[, incursion := is.na(id_progen)]
+    tree <- lineages[tree, on = "id_case"]
+
+    # sample cases to check paths
+    lins <- lineages[lineage != 0]
+    lins <- data.table(expand.grid(id_case = lins$id_case, i.id_case = lins$id_case))
+    lins <- lineages[, .(id_case = id_case, lineage = lineage)][lins, on = "id_case"]
+    lins <- lineages[, .(i.id_case = id_case, i.lineage = lineage)][lins, on = "i.id_case"]
+    lins <- lins[id_case != i.id_case & lineage != i.lineage]
+    # get unique pairs only
+    lins <- lins[!duplicated(t(apply(lins[, c("id_case", "i.id_case")], 1, sort))), ]
+
+    # get the unique combos
+    exclude <- c(paste(lins$i.id_case, lins$id_case, sep = "_"),
+                 paste(lins$id_case, lins$i.id_case, sep = "_"))
+    tree[, excl := paste(id_progen, id_case, sep = "_")]
+    tree <- tree[!(excl %in% exclude)]
+    known_progens <- k_tree$id_case
+    gr <- graph_from_data_frame(d = tree[, c("id_case",
+                                             "id_progen")][!is.na((id_progen))],
+                                vertices = lineages,
+                                directed = FALSE)
+
+    # this takes loads of time & is semi impossible with a larger graph
+    pths <- get_edge_dt(gr, lins)
+
+    while(nrow(pths) > 0) {
+
+      # when you get the paths you lose the directionality
+      # so need to join back up with the actual links
+      check <- rbind(pths[, .(id_progen = as.numeric(from),
+                              id_case = as.numeric(to), row_id)],
+                     pths[, .(id_progen = as.numeric(to),
+                              id_case = as.numeric(from), row_id)])
+      pths <- tree[,
+                   c("id_case", "id_progen")][check,
+                                              on = c("id_case", "id_progen"),
+                                              nomatch = NULL]
+
+      # Filter out any edges that are known (from tracing)
+      pths <- pths[!(id_case %in% known_progens)]
+
+      # Filter to the most frequently selected ones for each row id
+      pths[, freq := .N, by = c("id_case", "id_progen")]
+
+      pths[, max_freq := max(freq), by = "row_id"]
+      pths <- pths[freq == max_freq]
+
+      # Select the edge to break: get a random variate to select by
+      pths$selector <- runif(nrow(pths))
+
+      # Find the minimum selector
+      to_fix <- pths[pths[, .I[which.min(selector)],
+                          by = c("row_id")]$V1]
+      to_fix <- paste(to_fix$id_progen, to_fix$id_case, sep = "|")
+      gr <- delete.edges(gr, to_fix)
+
+      # Build graph
+      pths <- get_edge_dt(gr, lins)
+    }
+
+    # get the updated tree
+    pths <- data.table(as_data_frame(gr))
+
+    check <- rbind(pths[, .(id_progen = as.numeric(from),
+                            id_case = as.numeric(to))],
+                   pths[, .(id_progen = as.numeric(to),
+                            id_case = as.numeric(from))])
+    tree <- tree[check, on = c("id_case", "id_progen"), nomatch = NULL]
+
+    # for ones with no progenitor assigned, join with lineage data
+    # and set rest as NA
+    tree <- tree[, lineage := NULL][lineages, on = "id_case"]
+
+  }
+
 
   # Select progenitors
+  tree[, source_prob := dist_prob * t_prob][, prob_scale := source_prob/sum(source_prob), by = id_case]
   tree <- tree[, selected := assign_progen(prob_scale), by = id_case][selected == 1]
   tree[, prob_ll := log(source_prob)]
 
@@ -314,6 +396,7 @@ boot_trees <- function(id_case,
                        owned,
                        date_symptoms, # needs to be in a date class
                        days_uncertain,
+                       lineages,
                        exclude_progen = FALSE,
                        use_known_source = FALSE,
                        prune = TRUE,
@@ -387,6 +470,7 @@ boot_trees <- function(id_case,
                              x_coord = x_coord,
                              owned = owned, date_symptoms = date_symptoms,
                              days_uncertain = days_uncertain,
+                             lineages = lineages,
                              exclude_progen = exclude_progen,
                              use_known_source = use_known_source,
                              known_tree = known_tree,
