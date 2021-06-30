@@ -601,8 +601,6 @@ boot_trees <- function(id_case,
     grps <- rep(seq(1, chnks), N)[1:length(sims)]
   }
 
-  browser()
-
   foreach(i = seq_len(chnks),
           .combine = 'rbind', .options.RNG = seed,
           .export = exp_funs,
