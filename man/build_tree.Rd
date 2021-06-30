@@ -12,6 +12,8 @@ build_tree(
   owned,
   date_symptoms,
   days_uncertain,
+  lineages = NULL,
+  all_chains_sequenced = FALSE,
   exclude_progen = FALSE,
   use_known_source = FALSE,
   known_tree = NULL,
@@ -38,6 +40,12 @@ unknown should be 0, if no contact tracing data, can pass NULL)}
 \item{date_symptoms}{case date (i.e. date symptoms started)}
 
 \item{days_uncertain}{uncertainty in days around case date}
+
+\item{lineages}{a data table with two columns, id_case and lineage, designating a lineage
+assignment for each case, defaults to NULL which means trees wont be resolved to a phylogeny}
+
+\item{all_chains_sequenced}{whether all chains should have atleast one sequenced case (i.e. if lineage
+assignments exist), default is FALSE which mean some chains may not be linked to any sequenced case}
 
 \item{exclude_progen}{boolean of length id_case or 1, if TRUE then case should be excluded as a potential
 progenitor (i.e. if including livestock cases or other species that are dead-end transmissions)}

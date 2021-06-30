@@ -4,10 +4,29 @@
 \alias{select_progenitor}
 \title{Wrapper to select single progenitor in each case}
 \usage{
-select_progenitor(tree, si_fun, dist_fun, params)
+select_progenitor(
+  tree,
+  lineages,
+  k_tree,
+  incursions,
+  all_chains_sequenced,
+  si_fun,
+  dist_fun,
+  params,
+  known = FALSE
+)
 }
 \arguments{
 \item{tree}{the data.table with possible case pairs to select from}
+
+\item{lineages}{a data table with two columns, id_case and lineage, designating a lineage
+assignment for each case, defaults to NULL which means trees wont be resolved to a phylogeny}
+
+\item{k_tree}{the data.table with the known tree (when use_known_source = TRUE,
+NULL otherwise)}
+
+\item{all_chains_sequenced}{whether all chains should have atleast one sequenced case (i.e. if lineage
+assignments exist), default is FALSE which mean some chains may not be linked to any sequenced case}
 
 \item{si_fun}{the function to get the probability of a given temporal
 difference between cases in days (i.e. the serial interval)}
@@ -16,6 +35,8 @@ difference between cases in days (i.e. the serial interval)}
 difference between cases in meters (i.e. the dispersal kernel)}
 
 \item{params}{list of parameters to pass to si_fun and dist_fun}
+
+\item{incursion}{the data.table with incursions (when prune =TRUE, NULL otherwise)}
 }
 \value{
 a data.table filtered to the selected case-progenitor pair
