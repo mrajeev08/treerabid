@@ -337,6 +337,10 @@ get_gr <- function(links) {
 #'  cols id_case & id_progen)
 #'
 #' @return a vector of case ids which are part of a loop in the tree
+#'
+#' @importFrom igraph V subgraph.edges E count_multiple girth components
+#'  vertex_attr graph_from_data_frame
+#'
 #' @export
 #'
 check_loops <- function(links) {
@@ -478,7 +482,10 @@ get_edge_dt <- function(gr, lins) {
 #' & loops broken
 #'
 #' @param links
-#' @importFrom igraph V components vertex_attr
+#'
+#' @importFrom igraph V subgraph.edges E count_multiple girth components
+#'  vertex_attr graph_from_data_frame
+#'
 #' @return
 #'
 get_membership <- function(links) {
