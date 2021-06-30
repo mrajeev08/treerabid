@@ -478,7 +478,7 @@ get_edge_dt <- function(gr, lins) {
 #' & loops broken
 #'
 #' @param links
-#'
+#' @importFrom igraph V components vertex_attr
 #' @return
 #'
 get_membership <- function(links) {

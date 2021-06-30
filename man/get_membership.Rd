@@ -7,9 +7,6 @@
 \usage{
 get_membership(links)
 }
-\arguments{
-\item{links}{}
-}
 \value{
 
 }
