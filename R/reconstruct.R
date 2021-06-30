@@ -591,18 +591,24 @@ boot_trees <- function(id_case,
 
   }
 
-  chnks <- seq(1, N, by = floor(N/ncores))
-  from <- c(1, chnks[2:ncores] + 1)
-  to <- chnks[2:(ncores + 1)]
+  if(N <= ncores) {
+    chnks <- N
+    grps <- seq(1, ncores)
+    sims <- seq(1, N)
+  } else {
+    chnks <- floor(N/ncores)
+    sims <- seq(1, N)
+    grps <- rep(seq(1, chnks), N)[1:length(sims)]
+  }
 
   browser()
 
-  foreach(i = seq_len(length(from)),
+  foreach(i = seq_len(chnks),
           .combine = 'rbind', .options.RNG = seed,
           .export = exp_funs,
           .packages = exp_pkgs) %dorng% {
 
-          nsims <- seq(from[i], to[i])
+          nsims <- sims[grps == i]
 
           rbindlist(
             lapply(
