@@ -549,7 +549,7 @@ boot_trees <- function(id_case,
                        N = 1,
                        seed = 1245,
                        exp_funs = NULL,
-                       exp_pkgs = c("data.table", "treerabid"),
+                       exp_pkgs = c("data.table", "treerabid", "igraph"),
                        ncores = parallel::detectCores() - 1) {
 
   if(any(is.na(x_coord) | is.na(y_coord) | is.na(date_symptoms))) {
