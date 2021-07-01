@@ -428,6 +428,7 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
     print(something_does_not_exist3)
 
     ttree <- membership_dt[ttree, on = "id_case"]
+    print(something_does_not_exist4)
 
   }
   ttree[, prob_ll := log(source_prob)]
