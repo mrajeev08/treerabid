@@ -92,7 +92,6 @@ build_tree <- function(id_case,
 
     # fix any that have negative values due to uncertainty (better way?)
     k_tree$t_diff[k_tree$t_diff <= 0] <- min_time
-    print(something_does_not_exist_here)
 
     # Deal with multiple id's here (selecting ones that have multiple potential progenitors)
     k_tree <- select_progenitor(tree = k_tree, k_tree = NULL, lineages = NULL,
