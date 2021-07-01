@@ -359,6 +359,7 @@ find_lineages <- function(gr, links, known_progens) {
   # Filter to chains that have multiple lineages per chain
   multilins <- links[lineage != 0][, .(check = length(unique(lineage))),
                                      by = "membership"][check > 1]
+
   reassign <- links[membership %in% multilins$membership]
 
   # Filter to those sampled

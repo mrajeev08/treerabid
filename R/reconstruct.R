@@ -145,7 +145,7 @@ build_tree <- function(id_case,
   } else {
     incursions <- NULL # otherwise don't return incursions because you're not assigning them
   }
-
+  print(something_does_not_exist)
   # This is actually the slow part so limiting # of possibilities speeds things up a lot
   # Also joins up with known tree and incursions
   ttree <- select_progenitor(tree = ttree, k_tree = k_tree, lineages = lineages,
@@ -236,7 +236,7 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
     known_progens <- k_tree$id_case
     out <- find_lins_to_fix(ttree, known_progens)
     lins_to_fix <- out$lins_to_fix
-    membership_dt <- out$membership
+    membership_dt <- out$membership_dt
 
     # set links to fix to NA
     ttree[id_case %in% lins_to_fix]$id_progen <- NA
@@ -597,8 +597,7 @@ boot_trees <- function(id_case,
   foreach(i = seq_len(chnks),
           .combine = 'rbind', .options.RNG = seed,
           .export = exp_funs,
-          .packages = exp_pkgs,
-          .verbose = TRUE) %dorng% {
+          .packages = exp_pkgs) %dorng% {
 
           nsims <- sims[grps == i]
 
