@@ -284,15 +284,13 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
                          fixed_links, set_incs),
                     fill = TRUE)
 
-        print(something_does_not_exist)
-
-
         # clean ttree & links_all
         ttree[, c("membership", "membership_progen", "lineage_chain", "lineage_progen_chain") := NULL]
         tree[, c("membership", "membership_progen", "lineage_chain", "lineage_progen_chain") := NULL]
 
         # update membership_dt
         membership_dt <- get_membership(ttree)
+        print(something_does_not_exist)
 
         setTxtProgressBar(pb, pr)
       }
