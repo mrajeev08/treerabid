@@ -357,7 +357,10 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
 
       # Finally join up all the cases within a sample lineage (or try)
       # Join up the links with the updated membership
-      fix_chains <- membership_dt[lineage_chain != 0][, .(check = .N), by = c("membership", "lineage_chain")][, .(check = .N), by = "lineage_chain"]
+      print(something_does_not_exist6)
+
+      fix_chains <- membership_dt[lineage_chain != 0][, .(check = .N),
+                                                      by = c("membership", "lineage_chain")][, .(check = .N), by = "lineage_chain"]
       fix_chains <- fix_chains[check > 1]$lineage_chain
       nfixes <- length(fix_chains)
 
@@ -431,6 +434,9 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
     print(something_does_not_exist4)
 
   }
+
+  print(something_does_not_exist5)
+
   ttree[, prob_ll := log(source_prob)]
   ttree[, incursion := is.na(id_progen)]
 
