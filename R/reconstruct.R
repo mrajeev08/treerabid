@@ -148,7 +148,6 @@ build_tree <- function(id_case,
 
   # This is actually the slow part so limiting # of possibilities speeds things up a lot
   # Also joins up with known tree and incursions
-  print(something_does_not_exist_here2)
   ttree <- select_progenitor(tree = ttree, k_tree = k_tree, lineages = lineages,
                              incursions = incursions,
                              all_chains_sequenced = all_chains_sequenced,
@@ -351,7 +350,6 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
           # clean links_consensus & links_all
           ttree[, c("membership", "membership_progen", "lineage_chain", "lineage_progen_chain") := NULL]
           tree[, c("membership", "membership_progen", "lineage_chain", "lineage_progen_chain") := NULL]
-          print(something_does_not_exist1)
 
           # update membership_dt
           membership_dt <- get_membership(ttree)
@@ -360,7 +358,6 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
 
       # Finally join up all the cases within a sample lineage (or try)
       # Join up the links with the updated membership
-      print(something_does_not_exist6)
 
       fix_chains <- membership_dt[lineage_chain != 0][, .(check = .N),
                                                       by = c("membership", "lineage_chain")][, .(check = .N), by = "lineage_chain"]
@@ -422,7 +419,6 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
           # clean links_consensus & links_all
           ttree[, c("membership", "membership_progen", "lineage_chain", "lineage_progen_chain") := NULL]
           tree[, c("membership", "membership_progen", "lineage_chain", "lineage_progen_chain") := NULL]
-          print(something_does_not_exist2)
 
           # update membership_dt
           membership_dt <- get_membership(ttree)
@@ -431,10 +427,8 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
       }
 
     }
-    print(something_does_not_exist3)
 
     ttree <- membership_dt[ttree, on = "id_case"]
-    print(something_does_not_exist4)
 
   }
 
