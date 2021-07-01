@@ -99,6 +99,7 @@ build_tree <- function(id_case,
                                 all_chains_sequenced = all_chains_sequenced,
                                 si_fun = si_fun, dist_fun = dist_fun,
                                 params = params, known = TRUE)
+    print(something_does_not_exist_here)
 
     # Filter out of progenitor assigment (but not out of the candidate progens!)
     case_dt <- case_dt[!(id_case %in% k_tree$id_case)]
@@ -439,8 +440,6 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
 
   ttree[, prob_ll := log(source_prob)]
   ttree[, incursion := is.na(id_progen)]
-
-  print(something_does_not_exist5)
 
   return(ttree)
 }
