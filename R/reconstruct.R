@@ -154,6 +154,8 @@ build_tree <- function(id_case,
                              si_fun = si_fun, dist_fun = dist_fun,
                              params = params, known = FALSE)
 
+  print(something_does_not_exist7)
+
   return(ttree)
 
 }
@@ -435,10 +437,10 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
 
   }
 
-  print(something_does_not_exist5)
-
   ttree[, prob_ll := log(source_prob)]
   ttree[, incursion := is.na(id_progen)]
+
+  print(something_does_not_exist5)
 
   return(ttree)
 }
