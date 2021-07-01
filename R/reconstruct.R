@@ -231,7 +231,9 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
 
     # Check which ones have mismatched lineages
     ttree <- ttree[lineages, on = "id_case"]
-    known_progens <- ttree$id_case %in% k_tree$id_case
+    tree <- tree[lineages, on = "id_case"]
+
+    known_progens <- k_tree$id_case
     list2env(find_lins_to_fix(ttree, known_progens), envir = environment())
 
     # set links to fix to NA
@@ -272,7 +274,7 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
         # if none then set to NA (prob & links)
         incs <- ifelse(nrow(fixed_links) == 0, lins_to_fix[i], 0)
         set_incs <- ttree[id_case %in% incs]
-        set_incs[, c("id_progen", "links", "prob") := .(NA, NA, NA)]
+        set_incs[, id_progen := NA]
 
         # bind them together
         ttree <-
@@ -290,7 +292,7 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
         setTxtProgressBar(pb, pr)
       }
     }
-    browser()
+
     # If there are any chains that are not linked to any sampled case link them to
     # a sampled case if available (filter candidates to ones that have a sampled
     # case in chain available to them to link and then select a case and random variate)
@@ -352,7 +354,6 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
 
       # Finally join up all the cases within a sample lineage (or try)
       # Join up the links with the updated membership
-      ttree <- ttree[membership, on = "id_case"]
       fix_chains <- membership[lineage_chain != 0][, .(check = .N), by = c("membership", "lineage_chain")][, .(check = .N), by = "lineage_chain"]
       fix_chains <- fix_chains[check > 1]$lineage_chain
       nfixes <- length(fix_chains)
@@ -364,7 +365,7 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
         for(i in rfixes) {
 
           # Join up links with updated membership
-          tree <- membership[tree, on = "id_case"]
+          ttree <- ttree[membership, on = "id_case"]
           setnames(membership, c("membership", "id_case", "lineage_chain"),
                    c("membership_progen", "id_progen", "lineage_progen_chain"))
           tree <- membership[tree, on = "id_progen"]
@@ -590,7 +591,7 @@ boot_trees <- function(id_case,
     sims <- seq(1, N)
     grps <- rep(seq(1, chnks), N)[1:length(sims)]
   }
-  browser()
+
   foreach(i = seq_len(chnks),
           .combine = 'rbind', .options.RNG = seed,
           .export = exp_funs,
