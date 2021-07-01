@@ -145,7 +145,7 @@ build_tree <- function(id_case,
   } else {
     incursions <- NULL # otherwise don't return incursions because you're not assigning them
   }
-  print(something_does_not_exist)
+
   # This is actually the slow part so limiting # of possibilities speeds things up a lot
   # Also joins up with known tree and incursions
   ttree <- select_progenitor(tree = ttree, k_tree = k_tree, lineages = lineages,
@@ -241,7 +241,7 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
     # set links to fix to NA
     ttree[id_case %in% lins_to_fix]$id_progen <- NA
     nfixes <- length(lins_to_fix)
-
+    print(something_does_not_exist)
     if(nfixes > 0) {
 
       pb  <- txtProgressBar(1, nfixes, style = 3)
