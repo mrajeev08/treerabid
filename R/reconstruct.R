@@ -290,7 +290,6 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
 
         # update membership_dt
         membership_dt <- get_membership(ttree)
-        print(something_does_not_exist)
 
         setTxtProgressBar(pb, pr)
       }
@@ -349,6 +348,7 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
           # clean links_consensus & links_all
           ttree[, c("membership", "membership_progen", "lineage_chain", "lineage_progen_chain") := NULL]
           tree[, c("membership", "membership_progen", "lineage_chain", "lineage_progen_chain") := NULL]
+          print(something_does_not_exist1)
 
           # update membership_dt
           membership_dt <- get_membership(ttree)
@@ -416,6 +416,7 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
           # clean links_consensus & links_all
           ttree[, c("membership", "membership_progen", "lineage_chain", "lineage_progen_chain") := NULL]
           tree[, c("membership", "membership_progen", "lineage_chain", "lineage_progen_chain") := NULL]
+          print(something_does_not_exist2)
 
           # update membership_dt
           membership_dt <- get_membership(ttree)
@@ -424,6 +425,7 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
       }
 
     }
+    print(something_does_not_exist3)
 
     ttree <- membership_dt[ttree, on = "id_case"]
 
