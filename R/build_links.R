@@ -71,20 +71,20 @@ build_consensus_links <- function(links_all,
       pr <- pr + 1
       # Join up links with updated membership
       links_all <- membership[links_all, on = "id_case"]
-      setnames(membership, c("membership", "id_case", "lineage"),
-               c("membership_progen", "id_progen", "lineage_progen"))
+      setnames(membership, c("membership", "id_case", "lineage_chain"),
+               c("membership_progen", "id_progen", "lineage_progen_chain"))
       links_all <- membership[links_all, on = "id_progen"]
       links_all[, membership_progen := ifelse(is.na(membership_progen), 0,
                                               membership_progen)]
-      links_all[, lineage_progen := ifelse(is.na(lineage_progen), 0,
-                                           lineage_progen)]
+      links_all[, lineage_progen_chain := ifelse(is.na(lineage_progen_chain), 0,
+                                           lineage_progen_chain)]
 
       # For those that have no incursions and are also the minimum case replace
       # with the next most likely progen, that is not already in the current chains
       candidate_links <- links_all[id_case %in% loops_to_fix[i] & membership != membership_progen]
 
       # Also filter to those that in chain with same (or totally unsampled lineages)
-      candidate_links <- candidate_links[lineage * lineage_progen == 0 | lineage * lineage_progen == lineage^2]
+      candidate_links <- candidate_links[lineage_chain * lineage_progen_chain == 0 | lineage_chain * lineage_progen_chain == lineage_chain^2]
       fixed_links <- candidate_links[candidate_links[, .I[which.max(links)], by = c("id_case")]$V1]
 
       # if none then set to NA (prob & links)
@@ -99,12 +99,8 @@ build_consensus_links <- function(links_all,
                   fill = TRUE)
 
       # clean links_consensus & links_all
-      links_consensus[, c("membership", "membership_progen", "lineage", "lineage_progen") := NULL]
-      links_all[, c("membership", "membership_progen", "lineage", "lineage_progen") := NULL]
-
-      # rejoin with lineages
-      # to deal with issue that only known progenitors were possible for reassignment)
-      links_consensus <- links_consensus[lineages, on = "id_case"]
+      links_consensus[, c("membership", "membership_progen", "lineage_chain", "lineage_progen_chain") := NULL]
+      links_all[, c("membership", "membership_progen", "lineage_chain", "lineage_progen_chain") := NULL]
 
       # update membership
       membership <- get_membership(links_consensus)
@@ -131,20 +127,20 @@ build_consensus_links <- function(links_all,
       pr <- pr + 1
       # Join up links with updated membership
       links_all <- membership[links_all, on = "id_case"]
-      setnames(membership, c("membership", "id_case", "lineage"),
-               c("membership_progen", "id_progen", "lineage_progen"))
+      setnames(membership, c("membership", "id_case", "lineage_chain"),
+               c("membership_progen", "id_progen", "lineage_progen_chain"))
       links_all <- membership[links_all, on = "id_progen"]
       links_all[, membership_progen := ifelse(is.na(membership_progen), 0,
                                               membership_progen)]
-      links_all[, lineage_progen := ifelse(is.na(lineage_progen), 0,
-                                           lineage_progen)]
+      links_all[, lineage_progen_chain := ifelse(is.na(lineage_progen_chain), 0,
+                                           lineage_progen_chain)]
 
       # For those that have no incursions and are also the minimum case replace
       # with the next most likely progen, that is not already in the current chains
       candidate_links <- links_all[id_case %in% lins_to_fix[i] & membership != membership_progen]
 
       # Also filter to those that in chain with same (or totally unsampled lineages)
-      candidate_links <- candidate_links[lineage * lineage_progen == 0 | lineage * lineage_progen == lineage^2]
+      candidate_links <- candidate_links[lineage_chain * lineage_progen_chain == 0 | lineage_chain * lineage_progen_chain == lineage_chain^2]
       fixed_links <- candidate_links[candidate_links[, .I[which.max(links)], by = c("id_case")]$V1]
 
       # if none then set to NA (prob & links)
@@ -159,12 +155,8 @@ build_consensus_links <- function(links_all,
                   fill = TRUE)
 
       # clean links_consensus & links_all
-      links_consensus[, c("membership", "membership_progen", "lineage", "lineage_progen") := NULL]
-      links_all[, c("membership", "membership_progen", "lineage", "lineage_progen") := NULL]
-
-      # rejoin with lineages
-      # to deal with issue that only known progenitors were possible for reassignment)
-      links_consensus <- links_consensus[lineages, on = "id_case"]
+      links_consensus[, c("membership", "membership_progen", "lineage_chain", "lineage_progen_chain") := NULL]
+      links_all[, c("membership", "membership_progen", "lineage_chain", "lineage_progen_chain") := NULL]
 
       # update membership
       membership <- get_membership(links_consensus)
@@ -174,11 +166,9 @@ build_consensus_links <- function(links_all,
   }
 
   # update final membership & check loops if still some unresolved
-  links_consensus <- links_consensus[membership[, -"lineage"], on = "id_case"]
+  links_consensus <- links_consensus[membership, on = "id_case"]
   lins_to_fix <- check_lineages(links_consensus)
   loops <- check_loops(links_consensus)
-
-  links_consensus[, membership := NULL]
 
   # Test to make sure no more to_fix and warn if there are!
   if(length(loops) > 0) {
@@ -497,10 +487,10 @@ get_membership <- function(links) {
   V(gr)$membership <- components(gr)$membership
   membership <- data.table(membership = as.numeric(vertex_attr(gr, "membership")),
                            id_case = as.numeric(vertex_attr(gr, "name")),
-                           lineage = as.numeric(vertex_attr(gr, "lineage")))
+                           lineage_chain = as.numeric(vertex_attr(gr, "lineage")))
 
   # will only be one non zero lineage per chain as this is after mismatches are broken
-  membership[, lineage := sum(unique(lineage)), by = "membership"]
+  membership[, lineage_chain := sum(unique(lineage_chain)), by = "membership"]
 
   return(membership)
 }

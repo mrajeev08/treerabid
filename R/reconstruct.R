@@ -249,20 +249,20 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
         pr <- pr + 1
         # Join up links with updated membership
         tree <- membership[tree, on = "id_case"]
-        setnames(membership, c("membership", "id_case", "lineage"),
-                 c("membership_progen", "id_progen", "lineage_progen"))
+        setnames(membership, c("membership", "id_case", "lineage_chain"),
+                 c("membership_progen", "id_progen", "lineage_progen_chain"))
         tree <- membership[tree, on = "id_progen"]
         tree[, membership_progen := ifelse(is.na(membership_progen), 0,
                                            membership_progen)]
-        tree[, lineage_progen := ifelse(is.na(lineage_progen), 0,
-                                        lineage_progen)]
+        tree[, lineage_progen_chain := ifelse(is.na(lineage_progen_chain), 0,
+                                        lineage_progen_chain)]
 
         # For those that have no incursions and are also the minimum case replace
         # with the next most likely progen, that is not already in the current chains
         candidate_links <- tree[id_case %in% lins_to_fix[i] & membership != membership_progen]
 
         # Also filter to those that in chain with same (or totally unsampled lineages)
-        candidate_links <- candidate_links[lineage * lineage_progen == 0 | lineage * lineage_progen == lineage^2]
+        candidate_links <- candidate_links[lineage_chain * lineage_progen_chain == 0 | lineage_chain * lineage_progen_chain == lineage_chain^2]
 
         # Rescale probabilities & select
         fixed_links <- candidate_links[, prob_scale := source_prob/sum(source_prob),
@@ -281,12 +281,8 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
                     fill = TRUE)
 
         # clean ttree & links_all
-        ttree[, c("membership", "membership_progen", "lineage", "lineage_progen") := NULL]
-        tree[, c("membership", "membership_progen", "lineage", "lineage_progen") := NULL]
-
-        # rejoin with lineages
-        # to deal with issue that only known progenitors were possible for reassignment)
-        ttree <- ttree[lineages, on = "id_case"]
+        ttree[, c("membership", "membership_progen", "lineage_chain", "lineage_progen_chain") := NULL]
+        tree[, c("membership", "membership_progen", "lineage_chain", "lineage_progen_chain") := NULL]
 
         # update membership
         membership <- get_membership(ttree)
@@ -294,14 +290,14 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
         setTxtProgressBar(pb, pr)
       }
     }
-
+    browser()
     # If there are any chains that are not linked to any sampled case link them to
     # a sampled case if available (filter candidates to ones that have a sampled
     # case in chain available to them to link and then select a case and random variate)
     if(all_chains_sequenced) {
 
       # Join up the links with the updated membership
-      fix_chains <- membership[lineage == 0]$membership
+      fix_chains <- membership[lineage_chain == 0]$membership
       nfixes <- length(fix_chains)
 
       if(nfixes > 0) {
@@ -312,13 +308,13 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
 
           # Join up links with updated membership
           tree <- membership[tree, on = "id_case"]
-          setnames(membership, c("membership", "id_case", "lineage"),
-                   c("membership_progen", "id_progen", "lineage_progen"))
+          setnames(membership, c("membership", "id_case", "lineage_chain"),
+                   c("membership_progen", "id_progen", "lineage_progen_chain"))
           tree <- membership[tree, on = "id_progen"]
           tree[, membership_progen := ifelse(is.na(membership_progen), 0,
                                              membership_progen)]
-          tree[, lineage_progen := ifelse(is.na(lineage_progen), 0,
-                                          lineage_progen)]
+          tree[, lineage_progen_chain := ifelse(is.na(lineage_progen_chain), 0,
+                                          lineage_progen_chain)]
 
           # For those that have no incursions and are also the minimum case replace
           # with the next most likely progen, that is not already in the current chains
@@ -329,7 +325,7 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
             select_case <- sample(unique(candidate_links$id_case), 1)
             candidate_links <- candidate_links[id_case == select_case]
             # filter to progens in sample chain
-            candidate_links <- candidate_links[lineage_progen != 0]
+            candidate_links <- candidate_links[lineage_progen_chain != 0]
           }
 
           if(nrow(candidate_links) > 0) {
@@ -346,12 +342,8 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
           }
 
           # clean links_consensus & links_all
-          ttree[, c("membership", "membership_progen", "lineage", "lineage_progen") := NULL]
-          tree[, c("membership", "membership_progen", "lineage", "lineage_progen") := NULL]
-
-          # rejoin with lineages
-          # to deal with issue that only known progenitors were possible for reassignment)
-          ttree <- ttree[lineages, on = "id_case"]
+          ttree[, c("membership", "membership_progen", "lineage_chain", "lineage_progen_chain") := NULL]
+          tree[, c("membership", "membership_progen", "lineage_chain", "lineage_progen_chain") := NULL]
 
           # update membership
           membership <- get_membership(ttree)
@@ -360,9 +352,9 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
 
       # Finally join up all the cases within a sample lineage (or try)
       # Join up the links with the updated membership
-      ttree <- ttree[, lineage := NULL][membership, on = "id_case"]
-      fix_chains <- membership[lineage != 0][, .(check = .N), by = c("membership", "lineage")][, .(check = .N), by = "lineage"]
-      fix_chains <- fix_chains[check > 1]$lineage
+      ttree <- ttree[membership, on = "id_case"]
+      fix_chains <- membership[lineage_chain != 0][, .(check = .N), by = c("membership", "lineage_chain")][, .(check = .N), by = "lineage_chain"]
+      fix_chains <- fix_chains[check > 1]$lineage_chain
       nfixes <- length(fix_chains)
 
       if(nfixes > 0) {
@@ -373,17 +365,17 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
 
           # Join up links with updated membership
           tree <- membership[tree, on = "id_case"]
-          setnames(membership, c("membership", "id_case", "lineage"),
-                   c("membership_progen", "id_progen", "lineage_progen"))
+          setnames(membership, c("membership", "id_case", "lineage_chain"),
+                   c("membership_progen", "id_progen", "lineage_progen_chain"))
           tree <- membership[tree, on = "id_progen"]
           tree[, membership_progen := ifelse(is.na(membership_progen), 0,
                                              membership_progen)]
-          tree[, lineage_progen := ifelse(is.na(lineage_progen), 0,
-                                          lineage_progen)]
+          tree[, lineage_progen_chain := ifelse(is.na(lineage_progen_chain), 0,
+                                          lineage_progen_chain)]
 
           # all chains with given lineage & rank them by earliest date
-          to_fix <- ttree[lineage == fix_chains[i] & is.na(id_progen)]
-          ranks <- to_fix[, .(membership, lineage, t)][, rank := order(t)][, -c("t", "lineage")]
+          to_fix <- ttree[lineage_chain == fix_chains[i] & is.na(id_progen)]
+          ranks <- to_fix[, .(membership, lineage_chain, t)][, rank := order(t)][, -c("t", "lineage_chain")]
 
           # Filter to candidates to fix
           candidate_links <- tree[id_case %in% to_fix$id_case]
@@ -399,7 +391,7 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
             select_case <- sample(unique(candidate_links$id_case), 1)
             candidate_links <- candidate_links[id_case == select_case]
             # filter to progens in sample chain
-            candidate_links <- candidate_links[lineage_progen != 0]
+            candidate_links <- candidate_links[lineage_progen_chain != 0]
           }
 
           if(nrow(candidate_links) > 0) {
@@ -418,12 +410,8 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
           }
 
           # clean links_consensus & links_all
-          ttree[, c("membership", "membership_progen", "lineage", "lineage_progen") := NULL]
-          tree[, c("membership", "membership_progen", "lineage", "lineage_progen") := NULL]
-
-          # rejoin with lineages
-          # to deal with issue that only known progenitors were possible for reassignment)
-          ttree <- ttree[lineages, on = "id_case"]
+          ttree[, c("membership", "membership_progen", "lineage_chain", "lineage_progen_chain") := NULL]
+          tree[, c("membership", "membership_progen", "lineage_chain", "lineage_progen_chain") := NULL]
 
           # update membership
           membership <- get_membership(ttree)
@@ -432,8 +420,10 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
       }
 
     }
-  }
 
+    ttree <- membership[ttree, on = "id_case"]
+
+  }
   ttree[, prob_ll := log(source_prob)]
   ttree[, incursion := is.na(id_progen)]
 
@@ -600,7 +590,7 @@ boot_trees <- function(id_case,
     sims <- seq(1, N)
     grps <- rep(seq(1, chnks), N)[1:length(sims)]
   }
-
+  browser()
   foreach(i = seq_len(chnks),
           .combine = 'rbind', .options.RNG = seed,
           .export = exp_funs,
