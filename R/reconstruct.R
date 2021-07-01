@@ -234,7 +234,9 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
     tree <- tree[lineages, on = "id_case"]
 
     known_progens <- k_tree$id_case
-    list2env(find_lins_to_fix(ttree, known_progens), envir = environment())
+    out <- find_lins_to_fix(ttree, known_progens)
+    lins_to_fix <- out$lins_to_fix
+    membership_dt <- out$membership
 
     # set links to fix to NA
     ttree[id_case %in% lins_to_fix]$id_progen <- NA
@@ -376,7 +378,7 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
 
           # all chains with given lineage & rank them by earliest date
           to_fix <- ttree[lineage_chain == fix_chains[i] & is.na(id_progen)]
-          ranks <- to_fix[, .(membership, lineage_chain, t)][, rank := order(t)][, -c("t", "lineage_chain")]
+          ranks <- to_fix[, c("membership", "lineage_chain", "t")][, rank := order(t)][, -c("t", "lineage_chain")]
 
           # Filter to candidates to fix
           candidate_links <- tree[id_case %in% to_fix$id_case]
@@ -595,7 +597,8 @@ boot_trees <- function(id_case,
   foreach(i = seq_len(chnks),
           .combine = 'rbind', .options.RNG = seed,
           .export = exp_funs,
-          .packages = exp_pkgs) %dorng% {
+          .packages = exp_pkgs,
+          .verbose = TRUE) %dorng% {
 
           nsims <- sims[grps == i]
 
