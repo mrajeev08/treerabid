@@ -241,7 +241,7 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
     # set links to fix to NA
     ttree[id_case %in% lins_to_fix]$id_progen <- NA
     nfixes <- length(lins_to_fix)
-    print(something_does_not_exist)
+
     if(nfixes > 0) {
 
       pb  <- txtProgressBar(1, nfixes, style = 3)
@@ -283,6 +283,9 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
           rbindlist(list(ttree[!(id_case %in% lins_to_fix[i])],
                          fixed_links, set_incs),
                     fill = TRUE)
+
+        print(something_does_not_exist)
+
 
         # clean ttree & links_all
         ttree[, c("membership", "membership_progen", "lineage_chain", "lineage_progen_chain") := NULL]
