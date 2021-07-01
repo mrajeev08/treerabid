@@ -249,11 +249,11 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
       pr <- 0
       for(i in rfixes) {
         pr <- pr + 1
-        # Join up links with updated membership
-        tree <- membership[tree, on = "id_case"]
-        setnames(membership, c("membership", "id_case", "lineage_chain"),
+        # Join up links with updated membership_dt
+        tree <- membership_dt[tree, on = "id_case"]
+        setnames(membership_dt, c("membership", "id_case", "lineage_chain"),
                  c("membership_progen", "id_progen", "lineage_progen_chain"))
-        tree <- membership[tree, on = "id_progen"]
+        tree <- membership_dt[tree, on = "id_progen"]
         tree[, membership_progen := ifelse(is.na(membership_progen), 0,
                                            membership_progen)]
         tree[, lineage_progen_chain := ifelse(is.na(lineage_progen_chain), 0,
@@ -286,8 +286,8 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
         ttree[, c("membership", "membership_progen", "lineage_chain", "lineage_progen_chain") := NULL]
         tree[, c("membership", "membership_progen", "lineage_chain", "lineage_progen_chain") := NULL]
 
-        # update membership
-        membership <- get_membership(ttree)
+        # update membership_dt
+        membership_dt <- get_membership(ttree)
 
         setTxtProgressBar(pb, pr)
       }
@@ -298,8 +298,8 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
     # case in chain available to them to link and then select a case and random variate)
     if(all_chains_sequenced) {
 
-      # Join up the links with the updated membership
-      fix_chains <- membership[lineage_chain == 0]$membership
+      # Join up the links with the updated membership_dt
+      fix_chains <- membership_dt[lineage_chain == 0]$membership
       nfixes <- length(fix_chains)
 
       if(nfixes > 0) {
@@ -308,11 +308,11 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
 
         for(i in rfixes) {
 
-          # Join up links with updated membership
-          tree <- membership[tree, on = "id_case"]
-          setnames(membership, c("membership", "id_case", "lineage_chain"),
+          # Join up links with updated membership_dt
+          tree <- membership_dt[tree, on = "id_case"]
+          setnames(membership_dt, c("membership", "id_case", "lineage_chain"),
                    c("membership_progen", "id_progen", "lineage_progen_chain"))
-          tree <- membership[tree, on = "id_progen"]
+          tree <- membership_dt[tree, on = "id_progen"]
           tree[, membership_progen := ifelse(is.na(membership_progen), 0,
                                              membership_progen)]
           tree[, lineage_progen_chain := ifelse(is.na(lineage_progen_chain), 0,
@@ -347,14 +347,14 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
           ttree[, c("membership", "membership_progen", "lineage_chain", "lineage_progen_chain") := NULL]
           tree[, c("membership", "membership_progen", "lineage_chain", "lineage_progen_chain") := NULL]
 
-          # update membership
-          membership <- get_membership(ttree)
+          # update membership_dt
+          membership_dt <- get_membership(ttree)
         }
       }
 
       # Finally join up all the cases within a sample lineage (or try)
       # Join up the links with the updated membership
-      fix_chains <- membership[lineage_chain != 0][, .(check = .N), by = c("membership", "lineage_chain")][, .(check = .N), by = "lineage_chain"]
+      fix_chains <- membership_dt[lineage_chain != 0][, .(check = .N), by = c("membership", "lineage_chain")][, .(check = .N), by = "lineage_chain"]
       fix_chains <- fix_chains[check > 1]$lineage_chain
       nfixes <- length(fix_chains)
 
@@ -364,11 +364,11 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
 
         for(i in rfixes) {
 
-          # Join up links with updated membership
-          ttree <- ttree[membership, on = "id_case"]
-          setnames(membership, c("membership", "id_case", "lineage_chain"),
+          # Join up links with updated membership_dt
+          ttree <- ttree[membership_dt, on = "id_case"]
+          setnames(membership_dt, c("membership", "id_case", "lineage_chain"),
                    c("membership_progen", "id_progen", "lineage_progen_chain"))
-          tree <- membership[tree, on = "id_progen"]
+          tree <- membership_dt[tree, on = "id_progen"]
           tree[, membership_progen := ifelse(is.na(membership_progen), 0,
                                              membership_progen)]
           tree[, lineage_progen_chain := ifelse(is.na(lineage_progen_chain), 0,
@@ -414,15 +414,15 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
           ttree[, c("membership", "membership_progen", "lineage_chain", "lineage_progen_chain") := NULL]
           tree[, c("membership", "membership_progen", "lineage_chain", "lineage_progen_chain") := NULL]
 
-          # update membership
-          membership <- get_membership(ttree)
+          # update membership_dt
+          membership_dt <- get_membership(ttree)
 
         }
       }
 
     }
 
-    ttree <- membership[ttree, on = "id_case"]
+    ttree <- membership_dt[ttree, on = "id_case"]
 
   }
   ttree[, prob_ll := log(source_prob)]

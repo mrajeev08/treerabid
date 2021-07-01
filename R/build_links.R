@@ -70,10 +70,10 @@ build_consensus_links <- function(links_all,
     for(i in rfixes) {
       pr <- pr + 1
       # Join up links with updated membership
-      links_all <- membership[links_all, on = "id_case"]
-      setnames(membership, c("membership", "id_case", "lineage_chain"),
+      links_all <- membership_dt[links_all, on = "id_case"]
+      setnames(membership_dt, c("membership", "id_case", "lineage_chain"),
                c("membership_progen", "id_progen", "lineage_progen_chain"))
-      links_all <- membership[links_all, on = "id_progen"]
+      links_all <- membership_dt[links_all, on = "id_progen"]
       links_all[, membership_progen := ifelse(is.na(membership_progen), 0,
                                               membership_progen)]
       links_all[, lineage_progen_chain := ifelse(is.na(lineage_progen_chain), 0,
@@ -103,7 +103,7 @@ build_consensus_links <- function(links_all,
       links_all[, c("membership", "membership_progen", "lineage_chain", "lineage_progen_chain") := NULL]
 
       # update membership
-      membership <- get_membership(links_consensus)
+      membership_dt <- get_membership(links_consensus)
 
       setTxtProgressBar(pb, pr)
     }
@@ -125,11 +125,11 @@ build_consensus_links <- function(links_all,
     pr <- 0
     for(i in rfixes) {
       pr <- pr + 1
-      # Join up links with updated membership
-      links_all <- membership[links_all, on = "id_case"]
-      setnames(membership, c("membership", "id_case", "lineage_chain"),
+      # Join up links with updated membership_dt
+      links_all <- membership_dt[links_all, on = "id_case"]
+      setnames(membership_dt, c("membership", "id_case", "lineage_chain"),
                c("membership_progen", "id_progen", "lineage_progen_chain"))
-      links_all <- membership[links_all, on = "id_progen"]
+      links_all <- membership_dt[links_all, on = "id_progen"]
       links_all[, membership_progen := ifelse(is.na(membership_progen), 0,
                                               membership_progen)]
       links_all[, lineage_progen_chain := ifelse(is.na(lineage_progen_chain), 0,
@@ -158,15 +158,15 @@ build_consensus_links <- function(links_all,
       links_consensus[, c("membership", "membership_progen", "lineage_chain", "lineage_progen_chain") := NULL]
       links_all[, c("membership", "membership_progen", "lineage_chain", "lineage_progen_chain") := NULL]
 
-      # update membership
-      membership <- get_membership(links_consensus)
+      # update membership_dt
+      membership_dt <- get_membership(links_consensus)
 
       setTxtProgressBar(pb, pr)
     }
   }
 
   # update final membership & check loops if still some unresolved
-  links_consensus <- links_consensus[membership, on = "id_case"]
+  links_consensus <- links_consensus[membership_dt, on = "id_case"]
   lins_to_fix <- check_lineages(links_consensus)
   loops <- check_loops(links_consensus)
 
@@ -223,9 +223,9 @@ find_loops_to_fix <- function(links_consensus, fix_loops, case_dates,
 
   # Get the chain membership
   V(gr)$membership <- components(gr)$membership
-  membership <- data.table(membership = as.numeric(vertex_attr(gr, "membership")),
+  membership_dt <- data.table(membership = as.numeric(vertex_attr(gr, "membership")),
                            id_case = as.numeric(vertex_attr(gr, "name")))
-  links_consensus <- links_consensus[membership, on = "id_case"]
+  links_consensus <- links_consensus[membership_dt, on = "id_case"]
 
   if(fix_loops == "by_date") {
 
@@ -257,9 +257,9 @@ find_loops_to_fix <- function(links_consensus, fix_loops, case_dates,
   # Update links consensus and get new membership
   links_consensus[id_case %in% loops_to_fix]$id_progen <- NA
 
-  membership <- get_membership(links_consensus)
+  membership_dt <- get_membership(links_consensus)
 
-  return(list(membership = membership, loops_to_fix = loops_to_fix))
+  return(list(membership_dt = membership_dt, loops_to_fix = loops_to_fix))
 }
 
 
@@ -281,9 +281,9 @@ find_lins_to_fix <- function(links_consensus, known_progens) {
 
   # Get the chain membership
   V(gr)$membership <- components(gr)$membership
-  membership <- data.table(membership = as.numeric(vertex_attr(gr, "membership")),
+  membership_dt <- data.table(membership = as.numeric(vertex_attr(gr, "membership")),
                            id_case = as.numeric(vertex_attr(gr, "name")))
-  links_consensus <- links_consensus[membership, on = "id_case"]
+  links_consensus <- links_consensus[membership_dt, on = "id_case"]
 
   # Resolve the phylogeny
   if(length(unique(links_consensus[lineage != 0]$lineage)) > 1) {
@@ -294,12 +294,12 @@ find_lins_to_fix <- function(links_consensus, known_progens) {
 
   lins_to_fix <- as.numeric(unique(lins_to_fix))
 
-  # Update links consensus and get new membership
+  # Update links consensus and get new membership_dt
   links_consensus[id_case %in% lins_to_fix]$id_progen <- NA
 
-  membership <- get_membership(links_consensus)
+  membership_dt <- get_membership(links_consensus)
 
-  return(list(membership = membership, lins_to_fix = lins_to_fix))
+  return(list(membership_dt = membership_dt, lins_to_fix = lins_to_fix))
 }
 
 #' Helper function to get graph from links
@@ -485,14 +485,14 @@ get_membership <- function(links) {
 
   # Get the chain membership
   V(gr)$membership <- components(gr)$membership
-  membership <- data.table(membership = as.numeric(vertex_attr(gr, "membership")),
+  membership_dt <- data.table(membership = as.numeric(vertex_attr(gr, "membership")),
                            id_case = as.numeric(vertex_attr(gr, "name")),
                            lineage_chain = as.numeric(vertex_attr(gr, "lineage")))
 
   # will only be one non zero lineage per chain as this is after mismatches are broken
-  membership[, lineage_chain := sum(unique(lineage_chain)), by = "membership"]
+  membership_dt[, lineage_chain := sum(unique(lineage_chain)), by = "membership"]
 
-  return(membership)
+  return(membership_dt)
 }
 
 #' Build the consensus tree (i.e. the tree with the highest proportion of consensus links)
