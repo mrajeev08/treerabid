@@ -22,7 +22,8 @@
 #' @param dist_fun the function to get the probability of a given spatial
 #'  difference between cases in meters (i.e. the dispersal kernel)
 #' @param cutoff the probability level at which to prune links (i.e. cases can not be
-#'  linked if the distance or time difference is greater than the this %ile of the distribution)
+#'  linked if the distance or time difference is greater than the this %ile of the distribution);
+#'  can either be a single number or a named vector with a cutoff called "dist" and "time"
 #' @param params list of parameters to pass to si_fun and dist_fun
 #' @param min_time if uncertainty results in negative time difference between
 #'  known case pairs, set it to this value (better way to deal with propagating
@@ -50,8 +51,19 @@ build_tree <- function(id_case,
                        params,
                        min_time = 1e-6) {
 
-  if(cutoff >= 1 | cutoff <= 0 | length(cutoff) > 1) {
-    stop("Cutoff value should be a single probability between (0, 1)")
+  if(length(cutoff) > 1) {
+    if(length(cutoff) > 2 | !(c("time", "dist") %in% names(cutoff))) {
+      stop("Should pass two cutoff thresholds in a vector named 'dist' and 'time'")
+    }
+    time_cut <- cutoff["time"]
+    dist_cut <- cutoff["dist"]
+  } else {
+    time_cut <- cutoff
+    dist_cut <- cutoff
+  }
+
+  if(any(cutoff > 1) | any(cutoff <= 0)) {
+    stop("Cutoff value should be a single probability between (0, 1]")
   }
 
   # build line list with uncertainty
@@ -110,7 +122,7 @@ build_tree <- function(id_case,
   # do a inner join to get possible progenitors
   if(prune) {
     # get the si cutoff
-    si_cutoff <- si_fun(ttree = case_dt, cutoff = cutoff, params = params)
+    si_cutoff <- si_fun(ttree = case_dt, cutoff = time_cut, params = params)
     progen_dt[, max := join_on + si_cutoff]
 
     # pruning at first stage based on time cutoffs to speed up
@@ -136,7 +148,7 @@ build_tree <- function(id_case,
   # prune again for distance if true
   if(prune) {
     # Get the dist cutoff if pruning (either length 1 or length nrow(case_dt))
-    dist_cutoff <- dist_fun(ttree = ttree, cutoff = cutoff, params = params)
+    dist_cutoff <- dist_fun(ttree = ttree, cutoff = dist_cut, params = params)
     ttree <- ttree[dist_diff <= dist_cutoff]
 
     # and assign incursions as cases where no progenitor was identified
@@ -392,7 +404,6 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
                       fill = TRUE)
 
         }
-
 
         tree[, c("membership", "membership_progen", "lineage_chain", "lineage_progen_chain") := NULL]
         ttree[, c("membership", "membership_progen", "lineage_chain", "lineage_progen_chain") := NULL]
