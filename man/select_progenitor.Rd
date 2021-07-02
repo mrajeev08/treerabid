@@ -9,7 +9,6 @@ select_progenitor(
   lineages,
   k_tree,
   incursions,
-  all_chains_sequenced,
   si_fun,
   dist_fun,
   params,
@@ -24,9 +23,6 @@ assignment for each case, defaults to NULL which means trees wont be resolved to
 
 \item{k_tree}{the data.table with the known tree (when use_known_source = TRUE,
 NULL otherwise)}
-
-\item{all_chains_sequenced}{whether all chains should have atleast one sequenced case (i.e. if lineage
-assignments exist), default is FALSE which mean some chains may not be linked to any sequenced case}
 
 \item{si_fun}{the function to get the probability of a given temporal
 difference between cases in days (i.e. the serial interval)}

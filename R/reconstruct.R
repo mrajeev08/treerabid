@@ -10,8 +10,6 @@
 #' @param days_uncertain uncertainty in days around case date
 #' @param lineages a data table with two columns, id_case and lineage, designating a lineage
 #'  assignment for each case, defaults to NULL which means trees wont be resolved to a phylogeny
-#' @param all_chains_sequenced whether all chains should have atleast one sequenced case (i.e. if lineage
-#'  assignments exist), default is FALSE which mean some chains may not be linked to any sequenced case
 #' @param exclude_progen boolean of length id_case or 1, if TRUE then case should be excluded as a potential
 #'  progenitor (i.e. if including livestock cases or other species that are dead-end transmissions)
 #' @param use_known_source whether to assign known progenitors from contact tracing data
@@ -40,7 +38,6 @@ build_tree <- function(id_case,
                        date_symptoms,
                        days_uncertain,
                        lineages = NULL,
-                       all_chains_sequenced = FALSE,
                        exclude_progen = FALSE,
                        use_known_source = FALSE,
                        known_tree = NULL,
@@ -108,7 +105,6 @@ build_tree <- function(id_case,
     # Deal with multiple id's here (selecting ones that have multiple potential progenitors)
     k_tree <- select_progenitor(tree = k_tree, k_tree = NULL, lineages = NULL,
                                 incursions = NULL,
-                                all_chains_sequenced = all_chains_sequenced,
                                 si_fun = si_fun, dist_fun = dist_fun,
                                 params = params, known = TRUE)
 
@@ -162,7 +158,6 @@ build_tree <- function(id_case,
   # Also joins up with known tree and incursions
   ttree <- select_progenitor(tree = ttree, k_tree = k_tree, lineages = lineages,
                              incursions = incursions,
-                             all_chains_sequenced = all_chains_sequenced,
                              si_fun = si_fun, dist_fun = dist_fun,
                              params = params, known = FALSE)
 
@@ -228,7 +223,6 @@ build_known_tree <- function(id_case,
 #' @keywords internal
 #'
 select_progenitor <- function(tree, lineages, k_tree, incursions,
-                              all_chains_sequenced,
                               si_fun, dist_fun, params, known = FALSE) {
 
   # probabilities
@@ -418,7 +412,6 @@ boot_trees <- function(id_case,
                        date_symptoms, # needs to be in a date class
                        days_uncertain,
                        lineages = NULL,
-                       all_chains_sequenced = FALSE,
                        exclude_progen = FALSE,
                        use_known_source = FALSE,
                        prune = TRUE,
@@ -502,7 +495,6 @@ boot_trees <- function(id_case,
                              use_known_source = use_known_source,
                              known_tree = known_tree,
                              lineages = lineages,
-                             all_chains_sequenced = all_chains_sequenced,
                              prune = prune,
                              si_fun,
                              dist_fun,

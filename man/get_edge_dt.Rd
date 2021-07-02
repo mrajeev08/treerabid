@@ -7,7 +7,9 @@
 get_edge_dt(gr, lins)
 }
 \arguments{
-\item{lins}{}
+\item{gr}{the graph of the tree}
+
+\item{lins}{the lineages}
 }
 \value{
 

@@ -416,7 +416,7 @@ find_lineages <- function(gr, links, known_progens) {
 
 #' Get the number of lineages in each chain
 #'
-#' @param links
+#' @param links the tree or consensus tree
 #'
 #' @return
 #' @export
@@ -431,8 +431,8 @@ check_lineages <- function(links) {
 
 #' Internal function for getting edges between mismatched lineages
 #'
-#' @param gr
-#' @param lins
+#' @param gr the graph of the tree
+#' @param lins the lineages
 #'
 #' @return
 #'
@@ -472,7 +472,7 @@ get_edge_dt <- function(gr, lins) {
 #' Internal function for checking membership of chains AFTER lineage mismatches
 #' & loops broken
 #'
-#' @param links
+#' @param links the tree or consensus tree
 #'
 #' @importFrom igraph V subgraph.edges E count_multiple girth components
 #'  vertex_attr graph_from_data_frame
@@ -500,7 +500,7 @@ get_membership <- function(links) {
 #'
 #' @param links_consensus output from `build_consensus_links`
 #' @param ttrees  bootstrapped trees from `boot_trees`
-#' @type how to summarize the trees, either majority rule or Maximum clade
+#' @param type how to summarize the trees, either majority rule or Maximum clade
 #'  credibility-ish
 #'
 #' @return a data.table with the consensus tree (with score for each link,

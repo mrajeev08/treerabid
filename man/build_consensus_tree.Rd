@@ -15,6 +15,9 @@ build_consensus_tree(
 \item{links_consensus}{output from \code{build_consensus_links}}
 
 \item{ttrees}{bootstrapped trees from \code{boot_trees}}
+
+\item{type}{how to summarize the trees, either majority rule or Maximum clade
+credibility-ish}
 }
 \value{
 a data.table with the consensus tree (with score for each link,

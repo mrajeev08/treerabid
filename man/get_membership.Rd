@@ -7,6 +7,9 @@
 \usage{
 get_membership(links)
 }
+\arguments{
+\item{links}{the tree or consensus tree}
+}
 \value{
 
 }

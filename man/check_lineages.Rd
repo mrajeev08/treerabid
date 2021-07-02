@@ -7,7 +7,7 @@
 check_lineages(links)
 }
 \arguments{
-\item{links}{}
+\item{links}{the tree or consensus tree}
 }
 \value{
 

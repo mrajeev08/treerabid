@@ -13,7 +13,6 @@ boot_trees(
   date_symptoms,
   days_uncertain,
   lineages = NULL,
-  all_chains_sequenced = FALSE,
   exclude_progen = FALSE,
   use_known_source = FALSE,
   prune = TRUE,
@@ -25,7 +24,7 @@ boot_trees(
   N = 1,
   seed = 1245,
   exp_funs = NULL,
-  exp_pkgs = c("data.table", "treerabid"),
+  exp_pkgs = c("data.table", "treerabid", "igraph"),
   ncores = parallel::detectCores() - 1
 )
 }
@@ -48,9 +47,6 @@ unknown should be 0, if no contact tracing data, can pass NULL)}
 \item{lineages}{a data table with two columns, id_case and lineage, designating a lineage
 assignment for each case, defaults to NULL which means trees wont be resolved to a phylogeny}
 
-\item{all_chains_sequenced}{whether all chains should have atleast one sequenced case (i.e. if lineage
-assignments exist), default is FALSE which mean some chains may not be linked to any sequenced case}
-
 \item{exclude_progen}{boolean of length id_case or 1, if TRUE then case should be excluded as a potential
 progenitor (i.e. if including livestock cases or other species that are dead-end transmissions)}
 
@@ -66,7 +62,8 @@ difference between cases in days (i.e. the serial interval)}
 difference between cases in meters (i.e. the dispersal kernel)}
 
 \item{cutoff}{the probability level at which to prune links (i.e. cases can not be
-linked if the distance or time difference is greater than the this \%ile of the distribution)}
+linked if the distance or time difference is greater than the this \%ile of the distribution);
+can either be a single number or a named vector with a cutoff called "dist" and "time"}
 
 \item{params}{list of parameters to pass to si_fun and dist_fun}
 
