@@ -241,7 +241,7 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
 
     known_progens <- k_tree$id_case
 
-    out <- find_lins_to_fix(ttree, known_progens)
+    out <- find_lins_to_fix(ttree, known_progens, selector = "prob_scale")
 
     lins_to_fix <- out$lins_to_fix
     membership_dt <- out$membership_dt

@@ -25,11 +25,6 @@ build_all_links <- function(ttrees, N) {
 #'  (date symptoms started of case without uncertainty)
 #' @param lineages a data table with two columns, id_case and lineage, designating a lineage
 #'  assignment for each case, defaults to NULL which means trees wont be resolved to a phylogeny
-#' @param fix_loops If there are loops in the transmission tree (i.e. indicating uncertainty in
-#'  who-infected-whom), the loops can either be broken by reassigning the progenitor
-#'  of the case with the earliest case date in the loop (fix_loops = "by_date", the default).
-#'  or by breaking and replacing
-#'  links in the loop randomly (fix_loops = "random").
 #' @param known_progens a numeric vector of case ids for which progenitors are known
 #'
 #' @return a data.table with the case pairs most often linked in transmission tree and their
@@ -37,12 +32,9 @@ build_all_links <- function(ttrees, N) {
 #' @export
 #'
 build_consensus_links <- function(links_all,
-                                  case_dates = NULL,
+                                  case_dates,
                                   lineages = NULL,
-                                  known_progens = NULL,
-                                  fix_loops = c("by_date", "random")) {
-
-  fix_loops <- match.arg(fix_loops)
+                                  known_progens = NULL) {
 
   # Get the consensus links
   links_consensus <- links_all[links_all[, .I[which.max(links)], by = c("id_case")]$V1] # returns first max
@@ -52,9 +44,10 @@ build_consensus_links <- function(links_all,
   }
 
   links_consensus <- links_consensus[lineages, on = "id_case"]
+  links_all <- links_all[lineages, on = "id_case"]
 
   # First fix the loops
-  list2env(find_loops_to_fix(links_consensus, fix_loops, case_dates,
+  list2env(find_loops_to_fix(links_consensus, case_dates,
                              known_progens), envir = environment())
 
   # set links to fix to NA
@@ -65,9 +58,9 @@ build_consensus_links <- function(links_all,
 
     pb  <- txtProgressBar(1, nfixes, style = 3)
     message("Fixing loops:")
-    rfixes <- sample(nfixes, nfixes) # fix in random order
     pr <- 0
-    for(i in rfixes) {
+
+    for(i in seq_len(nfixes)) {
       pr <- pr + 1
       # Join up links with updated membership
       links_all <- membership_dt[links_all, on = "id_case"]
@@ -110,7 +103,8 @@ build_consensus_links <- function(links_all,
   }
 
   # Then fix the lineages
-  list2env(find_lins_to_fix(links_consensus, known_progens), envir = environment())
+  list2env(find_lins_to_fix(links_consensus, known_progens,
+                            selector = "prob"), envir = environment())
 
   # set links to fix to NA
   links_consensus[id_case %in% lins_to_fix]$id_progen <- NA
@@ -120,10 +114,10 @@ build_consensus_links <- function(links_all,
 
     pb  <- txtProgressBar(1, nfixes, style = 3)
     message("Fixing mismatched lineages:")
-
-    rfixes <- sample(nfixes, nfixes) # fix in random order
     pr <- 0
-    for(i in rfixes) {
+
+    # Fix in order of least -> most likely
+    for(i in seq_len(nfixes)) {
       pr <- pr + 1
       # Join up links with updated membership_dt
       links_all <- membership_dt[links_all, on = "id_case"]
@@ -166,7 +160,7 @@ build_consensus_links <- function(links_all,
   }
 
   # update final membership & check loops if still some unresolved
-  links_consensus <- links_consensus[membership_dt, on = "id_case"]
+  links_consensus <- membership_dt[links_consensus, on = "id_case"]
   lins_to_fix <- check_lineages(links_consensus)
   loops <- check_loops(links_consensus)
 
@@ -213,7 +207,7 @@ build_consensus_links <- function(links_all,
 #'  vertex_attr graph_from_data_frame
 #' @keywords internal
 #'
-find_loops_to_fix <- function(links_consensus, fix_loops, case_dates,
+find_loops_to_fix <- function(links_consensus, case_dates,
                               known_progens) {
 
   # build undirected & find the loops (which_multiple) & any cycles (girth)
@@ -227,31 +221,21 @@ find_loops_to_fix <- function(links_consensus, fix_loops, case_dates,
                            id_case = as.numeric(vertex_attr(gr, "name")))
   links_consensus <- links_consensus[membership_dt, on = "id_case"]
 
-  if(fix_loops == "by_date") {
-
-    if(is.null(case_dates)) {
-      stop("Need to pass case_dates data.table to fix loops by date.")
-    }
-
-    # join with case dates
-    links_consensus <- links_consensus[case_dates, on = "id_case"]
-    setnames(links_consensus, "symptoms_started", "selector")
-
-  } else {
-
-    # get a random variate to select by
-    links_consensus$selector <- runif(nrow(links_consensus))
-
+  if(is.null(case_dates)) {
+    stop("Need to pass case_dates data.table to fix loops by date.")
   }
+
+  # join with case dates
+  links_consensus <- links_consensus[case_dates, on = "id_case"]
 
   # Filter to the ones with loops
   # & filter out any that are known from contact tracing
   loops_to_fix <- links_consensus[id_case %in% loops & !(id_case %in% known_progens)]
 
-  # Find the minimum selector (either by case date or randomly select link to break)
-  loops_to_fix <- loops_to_fix[loops_to_fix[, .I[which.min(selector)],
-                                            by = c("membership")]$V1]$id_case
-
+  # Find the minimum selector case date
+  loops_to_fix <- loops_to_fix[loops_to_fix[, .I[which.min(symptoms_started)],
+                                            by = c("membership")]$V1]
+  loops_to_fix <- loops_to_fix[order(symptoms_started)]$id_case
   loops_to_fix <- as.numeric(unique(loops_to_fix))
 
   # Update links consensus and get new membership
@@ -274,7 +258,7 @@ find_loops_to_fix <- function(links_consensus, fix_loops, case_dates,
 #'  vertex_attr graph_from_data_frame
 #' @keywords internal
 #'
-find_lins_to_fix <- function(links_consensus, known_progens) {
+find_lins_to_fix <- function(links_consensus, known_progens, selector) {
 
   # build undirected & find the loops (which_multiple) & any cycles (girth)
   gr <- get_gr(links_consensus)
@@ -287,7 +271,8 @@ find_lins_to_fix <- function(links_consensus, known_progens) {
 
   # Resolve the phylogeny
   if(length(unique(links_consensus[lineage != 0]$lineage)) > 1) {
-    lins_to_fix <- find_lineages(gr, links_consensus, known_progens)
+    lins_to_fix <- find_lineages(gr, links_consensus, known_progens,
+                                 selector = selector)
   } else {
     lins_to_fix <- NULL
   }
@@ -354,7 +339,11 @@ check_loops <- function(links) {
 #' @inheritParams build_consensus_links
 #' @return a numeric vector of case ids to fix
 #'
-find_lineages <- function(gr, links, known_progens) {
+find_lineages <- function(gr, links, known_progens,
+                          selector = c("prob", "prob_scale")) {
+
+  # selector
+  selector <- match.arg(selector)
 
   # Filter to chains that have multiple lineages per chain
   multilins <- links[lineage != 0][, .(check = length(unique(lineage))),
@@ -386,9 +375,7 @@ find_lineages <- function(gr, links, known_progens) {
                             id_case = as.numeric(to), row_id)],
                    pths[, .(id_progen = as.numeric(to),
                             id_case = as.numeric(from), row_id)])
-    pths <- links[,
-                  c("id_case", "id_progen")][check,
-                                             on = c("id_case", "id_progen"),
+    pths <- links[check, on = c("id_case", "id_progen"),
                                              nomatch = NULL]
 
     # Filter out any edges that are known (from tracing)
@@ -400,18 +387,16 @@ find_lineages <- function(gr, links, known_progens) {
     pths[, max_freq := max(freq), by = "row_id"]
     pths <- pths[freq == max_freq]
 
-    # Select the edge to break: get a random variate to select by
-    pths$selector <- runif(nrow(pths))
-
-    # Find the minimum selector
+    # Select the edge to break: minimum probs
+    pths$selector <- pths[, get(selector)]
     to_fix <- pths[pths[, .I[which.min(selector)],
-                        by = c("row_id")]$V1]
+                          by = c("row_id")]$V1]
 
   } else {
     to_fix <- NULL
   }
 
-  return(unique(to_fix$id_case))
+  return(unique(to_fix[order(selector)]$id_case))
 }
 
 #' Get the number of lineages in each chain
@@ -510,12 +495,12 @@ get_membership <- function(links) {
 build_consensus_tree <- function(links_consensus, ttrees, links_all = NULL,
                                  type = c("majority", "mcc")) {
   type <- match.arg(type)
+  tree_consensus <- links_all[ttrees, on = c("id_progen", "id_case")]
 
   if(type == "majority") {
     sim_scores <- ttrees[links_consensus, on = c("id_case", "id_progen")][, score := 1][, .(score = sum(score)), by = "sim"]
     } else {
     # Join with links all and take the product of those
-    tree_consensus <- links_all[ttrees, on = c("id_progen", "id_case")]
     sim_scores <- tree_consensus[, .(score = prod(prob, na.rm = TRUE)),
                                  by = "sim"]
   }
