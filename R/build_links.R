@@ -54,7 +54,7 @@ build_consensus_links <- function(links_all,
   links_consensus[id_case %in% loops_to_fix]$id_progen <- NA
   nfixes <- length(loops_to_fix)
 
-  if(nfixes > 0) {
+  if(nfixes > 1) {
 
     pb  <- txtProgressBar(1, nfixes, style = 3)
     message("Fixing loops:")
@@ -110,7 +110,7 @@ build_consensus_links <- function(links_all,
   links_consensus[id_case %in% lins_to_fix]$id_progen <- NA
   nfixes <- length(lins_to_fix)
 
-  if(nfixes > 0) {
+  if(nfixes > 1) {
 
     pb  <- txtProgressBar(1, nfixes, style = 3)
     message("Fixing mismatched lineages:")

@@ -250,7 +250,7 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
     ttree[id_case %in% lins_to_fix]$id_progen <- NA
     nfixes <- length(lins_to_fix)
 
-    if(nfixes > 0) {
+    if(nfixes > 1) {
 
       pb  <- txtProgressBar(1, nfixes, style = 3)
       message("\n Fixing mismatched lineages:")
