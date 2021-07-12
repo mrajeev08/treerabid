@@ -274,3 +274,105 @@ fill_with <- function(x, filling, L = length(x)) {
   out[seq_along(x)] <- x
   return(out)
 }
+
+# the probability of 1:kappa_max -1 intermediate cases having been unobserved
+# and the kth case being observed
+# given a reporting probability (that applies equally to cases)
+fit_detection_from_kappa <- function(alpha = 0.01,
+                                     weights_obs,
+                                     pi) {
+
+  max_kappa <- get_kappa(alpha, pi)
+
+  weights <- dgeom(seq_len(max_kappa) - 1, pi)
+
+  # fill in either weights or weigths_obs with zeroes if needed
+  if(length(weights) < length(weights_obs)) {
+    weights[(length(weights) + 1):length(weights_obs)] <- 0
+  }
+
+  if(length(weights) > length(weights_obs)) {
+    weights_obs[(length(weights_obs) + 1):length(weights)] <- 0
+  }
+
+  # get the least squares
+  return(sum((weights_obs - weights)^2))
+}
+
+# sim kappa between case dates  (instead of max_gens, set an alpha level!)
+sim_generations <- function(t_diff, si_fun, params, max_kappa = 100,
+                            kappa_weights = TRUE) {
+
+  out <- matrix(si_fun(length(t_diff) * max_kappa, params), nrow = length(t_diff))
+
+  # starting one sorted from min to max (closest poss match in high rep scenario)
+  t_diff <- sort(t_diff)
+  out[, 1] <- sort(out[, 1])
+
+  # get the difference
+  out_sum <- t(apply(out, 1, cumsum)) - t_diff # get the diff
+  gens <- apply(out_sum, 1, function(x) which.max(x[x < 0])[1]) # select the one before tdiff exceeded
+  gens[is.na(gens)] <- 1
+
+  if(kappa_weights) {
+    gens <- tabulate(gens, nbins = max_kappa)/length(gens)
+  }
+
+  return(gens)
+}
+
+## simulate fake data
+si_fun <- function(N, params) {
+
+  rlnorm(N, meanlog = params$SI_meanlog, sdlog = params$SI_sdlog)
+
+}
+
+# simulate times given generation function & pi
+sim_times_pi <- function(si_fun, nobs, params, alpha = 0.001, pi) {
+
+  max_kappa <- get_kappa(alpha, pi)
+  out <- matrix(si_fun(nobs * max_kappa, params), ncol = max_kappa)
+  out <- t(apply(out, 1, cumsum))
+  weights <- dgeom(seq_len(max_kappa) - 1, pi)
+  kappas <- sample(seq_len(max_kappa), nobs, prob = weights, replace = TRUE)
+  t_diff <- out[cbind(seq_len(nobs), kappas)]
+
+  return(t_diff)
+}
+
+# fit N simulations to kappa and get minimum
+
+fit_sims_pi <- function(t_diff, nsims = 1000,
+                        candidate_pis, si_fun, params, alpha = 0.001) {
+
+  max_max_kappa <- get_kappa(alpha, pi = min(candidate_pis))
+  sims <- parallel::mclapply(seq_len(nsims),
+                             function(x) {
+                               sim_generations(t_diff, si_fun, params,
+                                               max_kappa = max_max_kappa,
+                                               kappa_weights = TRUE)
+                              })
+  unlist(parallel::mclapply(sims, function(x) {
+    ss <- unlist(lapply(candidate_pis, function(z) {
+        max_kappa <- get_kappa(alpha, pi = z)
+        fit_detection_from_kappa(alpha, weights_obs = x, pi = z)
+      }))
+    candidate_pis[which.min(ss)]
+  }))
+}
+
+get_kappa <- function(alpha, pi, min_kappa = 2) {
+  pmax(qgeom(1 - alpha, pi) + 1L, min_kappa)
+}
+
+# lapply(seq(0.01, 0.99, by = 0.05), function(z) {
+#   rbindlist(lapply(seq_len(10), function(x) {
+#     t_diff <- sim_times_pi(si_fun, nobs = 572, params = treerabid::params_treerabid, alpha = 0.01,
+#                            pi = z)
+#     ests <- fit_sims_pi(t_diff, nsims = 10, candidate_pis = seq(0.01, 0.99, by = 0.01),
+#                         si_fun, params = treerabid::params_treerabid, alpha = 0.01)
+#     data.table(true = z, estimated = ests, sim = x)}))
+#   })
+
+
