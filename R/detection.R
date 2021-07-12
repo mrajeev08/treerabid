@@ -311,7 +311,8 @@ sim_generations <- function(t_diff, si_fun, params, max_kappa = 100,
 
   # get the difference
   out_sum <- t(apply(out, 1, cumsum)) - t_diff # get the diff
-  gens <- apply(out_sum, 1, function(x) which.max(x[x < 0])[1]) # select the one before tdiff exceeded
+  out_sum[out_sum > 0] <- -Inf
+  gens <- apply(out_sum, 1, function(x) which.max(x)) # select the one before tdiff exceeded
   gens[is.na(gens)] <- 1
 
   if(kappa_weights) {
@@ -366,13 +367,14 @@ get_kappa <- function(alpha, pi, min_kappa = 2) {
   pmax(qgeom(1 - alpha, pi) + 1L, min_kappa)
 }
 
-# lapply(seq(0.01, 0.99, by = 0.05), function(z) {
+# tt <- rbindlist(lapply(seq(0.01, 0.99, by = 0.05), function(z) {
 #   rbindlist(lapply(seq_len(10), function(x) {
 #     t_diff <- sim_times_pi(si_fun, nobs = 572, params = treerabid::params_treerabid, alpha = 0.01,
 #                            pi = z)
 #     ests <- fit_sims_pi(t_diff, nsims = 10, candidate_pis = seq(0.01, 0.99, by = 0.01),
 #                         si_fun, params = treerabid::params_treerabid, alpha = 0.01)
 #     data.table(true = z, estimated = ests, sim = x)}))
-#   })
+#   }))
+
 
 
