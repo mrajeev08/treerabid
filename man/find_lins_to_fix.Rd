@@ -4,7 +4,7 @@
 \alias{find_lins_to_fix}
 \title{Internal function for finding mismatched lineages to fix}
 \usage{
-find_lins_to_fix(links_consensus, known_progens)
+find_lins_to_fix(links_consensus, known_progens, selector)
 }
 \arguments{
 \item{links_consensus}{consensus links build within build_consensus_links function}

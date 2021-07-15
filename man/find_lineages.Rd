@@ -4,7 +4,7 @@
 \alias{find_lineages}
 \title{Find the links to fix too resolve lineage discrepancies}
 \usage{
-find_lineages(gr, links, known_progens)
+find_lineages(gr, links, known_progens, selector = c("prob", "prob_scale"))
 }
 \arguments{
 \item{gr}{the graph of the links}

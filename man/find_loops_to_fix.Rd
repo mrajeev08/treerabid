@@ -4,16 +4,10 @@
 \alias{find_loops_to_fix}
 \title{Internal function for finding loops to fix}
 \usage{
-find_loops_to_fix(links_consensus, fix_loops, case_dates, known_progens)
+find_loops_to_fix(links_consensus, case_dates, known_progens)
 }
 \arguments{
 \item{links_consensus}{consensus links build within build_consensus_links function}
-
-\item{fix_loops}{If there are loops in the transmission tree (i.e. indicating uncertainty in
-who-infected-whom), the loops can either be broken by reassigning the progenitor
-of the case with the earliest case date in the loop (fix_loops = "by_date", the default).
-or by breaking and replacing
-links in the loop randomly (fix_loops = "random").}
 
 \item{case_dates}{data.table with two columns id_case (id of case) and symptoms_started
 (date symptoms started of case without uncertainty)}

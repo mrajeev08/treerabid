@@ -1,158 +1,35 @@
 # Functions to estimate detection probabilities ----
-# Per Cori et al
-# adapted from vimes here
-# for estimating detection probabilities
+# Per Cori et al 2019
 
-#' Estimate detection probabilities given observed distances between case pairs
+#' Simulate the number of generations between two linked cases based on their
+#' serial interval
 #'
-#' Adapted from [Cori et al. 2019]() and the R package `vimes`
+#' This is based on Cori et al. 2019
+#' (https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1006554),
+#' which works out analytical expectations of the number of observed generations
+#' between linked cases given a detection probaility.
 #'
-#' @param dist_pairs observed distances between linked case pairs (i.e. from
-#'  contact tracing data + transmission tree reconstruction)
-#' @param p vector of probabilities corresponding to expected probabilities
-#'  of discrete sequential distances (this is still not ironed out, but only
-#'  needed for empirical distributions)
-#' @param pdf type of distance, options are "temporal", "spatial", "empirical", or "genetic"
-#' @param fixed_pars parameters to pass to the d functions (i.e. dempiric, dgamma, dgenetic, dspatial)
-#' @param alpha the value at which to cutoff the potential number of cases between two linked cases
-#'  see Cori et al. for more details
-#'  si_base <- distcrete::distcrete("lnorm", 1L,
-#'                                  meanlog = treerabid::params_treerabid$SI_meanlog,
-#'                                  sdlog = treerabid::params_treerabid$SI_sdlog)$d(1:1000)
+#' @param t_diff the observed time differences between linked cases
+#' @param si_fun a function for the serial interval with arguments N (the number
+#'  to draw) and params (a list of parameters for the function), see si_fun_lnorm for
+#'  an example.
+#' @param params a list with parameters for the si_fun function to draw serial intervals
+#' @param max_kappa integer, the constrained maximum number of generatios between two linked cases
+#' @param kappa_weights boolean, whether to return the simulated generations for each case or
+#'  the weights (i.e. the proportion of cases separated by 1:max_kappa generations)
+#' @param known_kappas vector of known kappas (i.e. if some cases are traced, you know
+#'  kappa = 1 for these cases)
 #'
-convolve_empirical <- function(p, alpha = 0.001, max_time, min_pi) {
-
-    out <- list()
-    p <- fill_with(p, 0, max_time)
-    out[[1]] <- p
-    max_kappa <- get_kappa(alpha, pi = min_pi)
-
-    for (k in 2:max_kappa) {
-      ps <- stats::convolve(out[[k-1]],
-                            rev(p),
-                            type="open")
-      if(length(ps) < max_time) {
-        ps <- fill_with(ps, 0, max_time)
-      }
-
-      if(length(ps) > max_time) {
-        ps <- ps[1:max_time]
-      }
-
-      if(sum(ps) > alpha) {
-        out[[k]] <- ps
-      } else {
-        break
-      }
-    }
-
-    out <- do.call(cbind, out)
-    out[out < 0] <- 0
-    colnames(out) <- seq_len(ncol(out))
-
-  return(out)
-}
-
-get_empirical_probs <- function(p_mat, t_diff) {
-
-  out_probs <- p_mat[t_diff, ]
-
-}
-
-# sim kappa between case dates  (instead of max_gens, set an alpha level!)
-est_generations <- function(out_probs,
-                            kappa_weights = TRUE) {
-
-   k_max <- ncol(out_probs)
-   scaled_probs <- out_probs/rowSums(out_probs)
-   gens <- apply(scaled_probs, 1, function(x) sample(k_max, 1, prob = x))
-
-   if(kappa_weights) {
-    gens <- tabulate(gens, nbins = k_max)/length(gens)
-  }
-
-  return(gens)
-}
-
-est_pi <- function(t_diff, nsims = 1000, out_probs,
-                   candidate_pis) {
-
-  sims <- lapply(seq_len(nsims),
-                 function(x) {
-                   est_generations(out_probs,
-                                   kappa_weights = TRUE)
-                             })
-
-  candidate_weights <- lapply(candidate_pis,
-                              function(x) {
-                                dgeom(seq_len(ncol(out_probs)) - 1, x)
-                              })
-  candidate_weights <- do.call(cbind, candidate_weights)
-  out <- unlist(lapply(sims, function(x) {
-    candidate_pis[which.min(colSums((x - candidate_weights)^2))]
-  }))
-
-  return(out)
-}
-
-# # get the prob mat
-# max_base <- qlnorm(0.999, meanlog = treerabid::params_treerabid$SI_meanlog,
-#                    sdlog = treerabid::params_treerabid$SI_sdlog)
-# p <- distcrete::distcrete("lnorm", 1L,
-#                            meanlog = treerabid::params_treerabid$SI_meanlog,
-#                            sdlog = treerabid::params_treerabid$SI_sdlog)$d(1:max_base)
-# out_mat <- convolve_empirical(p, alpha = 0.001, max_time = 15000, min_pi = 0.01)
-# system.time({
-#  tt <- rbindlist(lapply(seq(0.01, 0.99, by = 0.05), function(z) {
-#   rbindlist(lapply(seq_len(10), function(x) {
-#     t_diff <- sim_times_pi(si_fun, nobs = 572, params = treerabid::params_treerabid, alpha = 0.001,
-#                            pi = z)
-#     out_probs <- get_empirical_probs(out_mat, t_diff)
-#     ests <- est_pi(t_diff, nsims = 10, out_probs,
-#                    candidate_pis = seq(0.01, 0.99, by = 0.25))
-#     data.table(true = z, estimated = ests, sim = x)}))
-#   }))
-# })
-
-
-# Helpers ----
-fill_with <- function(x, filling, L = length(x)) {
-  if (L <= length(x)) {
-    return(x)
-  }
-  out <- rep(filling, L)
-  out[seq_along(x)] <- x
-  return(out)
-}
-
-# the probability of 1:kappa_max -1 intermediate cases having been unobserved
-# and the kth case being observed
-# given a reporting probability (that applies equally to cases)
-fit_detection_from_kappa <- function(alpha = 0.01,
-                                     weights_obs,
-                                     pi) {
-
-  max_kappa <- get_kappa(alpha, pi)
-
-  weights <- dgeom(seq_len(max_kappa) - 1, pi)
-
-  # fill in either weights or weigths_obs with zeroes if needed
-  if(length(weights) < length(weights_obs)) {
-    weights[(length(weights) + 1):length(weights_obs)] <- 0
-  }
-
-  if(length(weights) > length(weights_obs)) {
-    weights_obs[(length(weights_obs) + 1):length(weights)] <- 0
-  }
-
-  # get the least squares
-  return(sum((weights_obs - weights)^2))
-}
-
-# sim kappa between case dates  (instead of max_gens, set an alpha level!)
+#' @return either a vector of the simulated generations or a vector of proportions of 1:max_kappa
+#' @export
+#'
+#'
 sim_generations <- function(t_diff, si_fun, params, max_kappa = 100,
-                            kappa_weights = TRUE) {
+                            kappa_weights = TRUE, known_kappas = NULL) {
 
+  if(!is.null(known_kappas)) {
+    t_diff <- t_diff[known_kappas == 0]
+  }
   out <- matrix(si_fun(length(t_diff) * max_kappa, params), nrow = length(t_diff))
 
   # starting one sorted from min to max (closest poss match in high rep scenario)
@@ -165,6 +42,11 @@ sim_generations <- function(t_diff, si_fun, params, max_kappa = 100,
   gens <- apply(out_sum, 1, function(x) which.max(x)) # select the one before tdiff exceeded
   gens[is.na(gens)] <- 1
 
+  if(!is.null(known_kappas)) {
+    known_kappas[known_kappas == 0] <- gens
+    gens <- known_kappas
+  }
+
   if(kappa_weights) {
     gens <- tabulate(gens, nbins = max_kappa)/length(gens)
   }
@@ -172,14 +54,32 @@ sim_generations <- function(t_diff, si_fun, params, max_kappa = 100,
   return(gens)
 }
 
-## simulate fake data
-si_fun <- function(N, params) {
+
+#' Example serial interval function for input
+#'
+#' @param N the number to draw
+#' @param params a list with the parameters
+#'
+#' @return a vector of serial intervals
+#' @export
+#'
+si_fun_lnorm <- function(N, params) {
 
   rlnorm(N, meanlog = params$SI_meanlog, sdlog = params$SI_sdlog)
 
 }
 
-# simulate times given generation function & pi
+#' Simulate times given generation function & pi, for validating detection estimation
+#'
+#' @inheritParams sim_generations
+#' @param nobs the number of observations to simulation
+#' @param alpha probability, the value at which to constrain kappa (i.e. to determine max_kappa
+#'  for sim_generations), i.e. the probability of observing this kappa for a given pi is < alpha
+#' @param pi detection probability (the proportion of cases which are detected)
+#'
+#' @return a vector of time differences between linked cases
+#' @export
+#'
 sim_times_pi <- function(si_fun, nobs, params, alpha = 0.001, pi) {
 
   max_kappa <- get_kappa(alpha, pi)
@@ -192,7 +92,40 @@ sim_times_pi <- function(si_fun, nobs, params, alpha = 0.001, pi) {
   return(t_diff)
 }
 
-# fit N simulations to kappa and get minimum
+#' Fit detection probability given observed time differences between linked cases
+#' and a serial interval distribution
+#'
+#' @inheritParams sim_generations
+#' @inheritParams sim_times_pi
+#' @param nsims the number of estimates to generate for the observed time differences
+#' @param candidate_pis the candidate values of the detection probability to evaluate
+#'
+#' @return a vector of estimates of the detection probability generated by minimizing
+#'  the sum of squares between the observed and the expected (only looks at values passed
+#'  into candidate_pis)
+#' @export
+#'
+#' @examples
+#' \dontrun
+#' # This example shows how to generate simulated data based on a detection estimate
+#' # and a serial interval distribution and see whether the values can be recovered
+#'
+#' \dontrun{
+#' system.time({
+#' tt <- rbindlist(lapply(seq(0.01, 0.99, by = 0.05), function(z) {
+#'     rbindlist(lapply(seq_len(5), function(x) {
+#'     t_diff <- sim_times_pi(si_fun_lnorm, nobs = 572, params = treerabid::params_treerabid, alpha = 0.01,
+#'                           pi = z)
+#'     ests <- fit_sims_pi(t_diff, nsims = 5, candidate_pis = seq(0.01, 0.99, by = 0.01),
+#'                        si_fun, params = treerabid::params_treerabid, alpha = 0.01)
+#'     data.table(true = z, estimated = ests, sim = x)}))
+#'  }))
+#'
+#' plot(tt$true, tt$estimated)
+#' abline(a = 0, b = 1, col = "red") # the 1:1 line
+#' }
+#' }
+#'
 fit_sims_pi <- function(t_diff, nsims = 1000,
                         candidate_pis, si_fun, params, alpha = 0.001) {
 
@@ -200,19 +133,21 @@ fit_sims_pi <- function(t_diff, nsims = 1000,
 
   candidate_weights <- lapply(candidate_pis,
                               function(x) {
-                                dgeom(seq_len(ncol(out_probs)) - 1, x)
+                                dgeom(seq_len(max_max_kappa) - 1, x)
                               })
   candidate_weights <- do.call(cbind, candidate_weights)
 
   out <-
-    parallel::mclapply(
-      seq_len(nsims),
-      function(x) {
-        weights_sim <- sim_generations(t_diff, si_fun, params,
-                                       max_kappa = max_max_kappa,
-                                       kappa_weights = TRUE)
-        candidate_pis[which.min(colSums((weights_sim - candidate_weights)^2))]
-      }
+    unlist(
+      lapply(
+        seq_len(nsims),
+        function(x) {
+          weights_sim <- sim_generations(t_diff, si_fun, params,
+                                         max_kappa = max_max_kappa,
+                                         kappa_weights = TRUE)
+          candidate_pis[which.min(colSums((weights_sim - candidate_weights)^2))]
+        }
+      )
     )
 
     return(out)
@@ -223,14 +158,6 @@ get_kappa <- function(alpha, pi, min_kappa = 2) {
   pmax(qgeom(1 - alpha, pi) + 1L, min_kappa)
 }
 
-# tt <- rbindlist(lapply(seq(0.01, 0.99, by = 0.05), function(z) {
-#   rbindlist(lapply(seq_len(10), function(x) {
-#     t_diff <- sim_times_pi(si_fun, nobs = 572, params = treerabid::params_treerabid, alpha = 0.01,
-#                            pi = z)
-#     ests <- fit_sims_pi(t_diff, nsims = 10, candidate_pis = seq(0.01, 0.99, by = 0.01),
-#                         si_fun, params = treerabid::params_treerabid, alpha = 0.01)
-#     data.table(true = z, estimated = ests, sim = x)}))
-#   }))
 
 
 

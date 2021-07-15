@@ -6,10 +6,9 @@
 \usage{
 build_consensus_links(
   links_all,
-  case_dates = NULL,
+  case_dates,
   lineages = NULL,
-  known_progens = NULL,
-  fix_loops = c("by_date", "random")
+  known_progens = NULL
 )
 }
 \arguments{
@@ -22,12 +21,6 @@ build_consensus_links(
 assignment for each case, defaults to NULL which means trees wont be resolved to a phylogeny}
 
 \item{known_progens}{a numeric vector of case ids for which progenitors are known}
-
-\item{fix_loops}{If there are loops in the transmission tree (i.e. indicating uncertainty in
-who-infected-whom), the loops can either be broken by reassigning the progenitor
-of the case with the earliest case date in the loop (fix_loops = "by_date", the default).
-or by breaking and replacing
-links in the loop randomly (fix_loops = "random").}
 }
 \value{
 a data.table with the case pairs most often linked in transmission tree and their
