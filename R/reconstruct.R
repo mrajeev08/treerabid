@@ -44,7 +44,7 @@ build_tree <- function(id_case,
                        params,
                        min_time = 1e-6) {
 
-  if(cutoff >= 1 | cutoff <= 0 | length(cutoff) > 1) {
+  if(cutoff > 1 | cutoff <= 0 | length(cutoff) > 1) {
     stop("Cutoff value should be a single probability between (0, 1)")
   }
 
