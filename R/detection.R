@@ -133,6 +133,7 @@ sim_times_pi <- function(si_fun, nobs, params, alpha = 0.001, pi) {
 #'
 fit_sims_pi <- function(t_diff, nsims = 1000,
                         candidate_pis, si_fun, params, alpha = 0.001,
+                        known_kappas = NULL,
                         seed = 132) {
 
   max_max_kappa <- get_kappa(alpha, pi = min(candidate_pis))
@@ -148,7 +149,7 @@ fit_sims_pi <- function(t_diff, nsims = 1000,
             .packages = "treerabid") %dorng% {
               weights_sim <- sim_generations(t_diff, si_fun, params,
                                              max_kappa = max_max_kappa,
-                                             kappa_weights = TRUE)
+                                             kappa_weights = TRUE, known_kappas)
               candidate_pis[which.min(colSums((weights_sim - candidate_weights)^2))]
 
             }
