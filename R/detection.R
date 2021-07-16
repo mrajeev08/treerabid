@@ -6,7 +6,7 @@
 #'
 #' This is based on Cori et al. 2019
 #' (https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1006554),
-#' which works out analytical expectations of the number of observed generations
+#' which works out analytical expectations of the number of unobserved generations
 #' between linked cases given a detection probaility.
 #'
 #' @param t_diff the observed time differences between linked cases
@@ -21,6 +21,8 @@
 #'  kappa = 1 for these cases)
 #'
 #' @return either a vector of the simulated generations or a vector of proportions of 1:max_kappa
+#' @importFrom matrixStats rowCumsums
+#' @importFrom Rfast rowMins
 #' @export
 #'
 #'
@@ -30,15 +32,17 @@ sim_generations <- function(t_diff, si_fun, params, max_kappa = 100,
   if(!is.null(known_kappas)) {
     t_diff <- t_diff[known_kappas == 0]
   }
-  out <- matrix(si_fun(length(t_diff) * max_kappa, params), nrow = length(t_diff))
+  nr <- length(t_diff)
+  vals <- si_fun(nr * max_kappa, params)
+  out <- matrix(vals, nrow = nr)
 
   # starting one sorted from min to max (closest poss match in high rep scenario)
   t_diff <- sort(t_diff)
   out[, 1] <- sort(out[, 1])
 
   # get the difference
-  out_sum <- abs(t(apply(out, 1, cumsum)) - t_diff) # get the diff
-  gens <- apply(out_sum, 1, function(x) which.min(x)) # select the one closest to
+  out_sum <- abs(rowCumsums(out) - t_diff) # get the diff
+  gens <- rowMins(out_sum) # select the one closest to
   gens[is.na(gens)] <- 1
 
   if(!is.null(known_kappas)) {
@@ -105,7 +109,6 @@ sim_times_pi <- function(si_fun, nobs, params, alpha = 0.001, pi) {
 #' @export
 #'
 #' @examples
-#' \dontrun
 #' # This example shows how to generate simulated data based on a detection estimate
 #' # and a serial interval distribution and see whether the values can be recovered
 #'
@@ -116,7 +119,7 @@ sim_times_pi <- function(si_fun, nobs, params, alpha = 0.001, pi) {
 #'     t_diff <- sim_times_pi(si_fun_lnorm, nobs = 572, params = treerabid::params_treerabid, alpha = 0.01,
 #'                           pi = z)
 #'     ests <- fit_sims_pi(t_diff, nsims = 5, candidate_pis = seq(0.01, 0.99, by = 0.01),
-#'                        si_fun, params = treerabid::params_treerabid, alpha = 0.01)
+#'                        si_fun_lnorm, params = treerabid::params_treerabid, alpha = 0.01)
 #'     data.table(true = z, estimated = ests, sim = x)}))
 #'  }))
 #'

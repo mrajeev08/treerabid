@@ -33,7 +33,6 @@ Fit detection probability given observed time differences between linked cases
 and a serial interval distribution
 }
 \examples{
-\dontrun
 # This example shows how to generate simulated data based on a detection estimate
 # and a serial interval distribution and see whether the values can be recovered
 
@@ -44,7 +43,7 @@ tt <- rbindlist(lapply(seq(0.01, 0.99, by = 0.05), function(z) {
     t_diff <- sim_times_pi(si_fun_lnorm, nobs = 572, params = treerabid::params_treerabid, alpha = 0.01,
                           pi = z)
     ests <- fit_sims_pi(t_diff, nsims = 5, candidate_pis = seq(0.01, 0.99, by = 0.01),
-                       si_fun, params = treerabid::params_treerabid, alpha = 0.01)
+                       si_fun_lnorm, params = treerabid::params_treerabid, alpha = 0.01)
     data.table(true = z, estimated = ests, sim = x)}))
  }))
 
