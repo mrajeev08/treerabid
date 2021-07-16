@@ -108,6 +108,9 @@ sim_times_pi <- function(si_fun, nobs, params, alpha = 0.001, pi) {
 #'  into candidate_pis)
 #' @export
 #'
+#' @importFrom foreach foreach
+#' @importFrom doRNG %dorng%
+#'
 #' @examples
 #' # This example shows how to generate simulated data based on a detection estimate
 #' # and a serial interval distribution and see whether the values can be recovered
@@ -129,7 +132,8 @@ sim_times_pi <- function(si_fun, nobs, params, alpha = 0.001, pi) {
 #' }
 #'
 fit_sims_pi <- function(t_diff, nsims = 1000,
-                        candidate_pis, si_fun, params, alpha = 0.001) {
+                        candidate_pis, si_fun, params, alpha = 0.001,
+                        seed = 132) {
 
   max_max_kappa <- get_kappa(alpha, pi = min(candidate_pis))
 
@@ -140,17 +144,14 @@ fit_sims_pi <- function(t_diff, nsims = 1000,
   candidate_weights <- do.call(cbind, candidate_weights)
 
   out <-
-    unlist(
-      lapply(
-        seq_len(nsims),
-        function(x) {
-          weights_sim <- sim_generations(t_diff, si_fun, params,
-                                         max_kappa = max_max_kappa,
-                                         kappa_weights = TRUE)
-          candidate_pis[which.min(colSums((weights_sim - candidate_weights)^2))]
-        }
-      )
-    )
+    foreach(i =  seq_len(nsims), .combine = c, .options.RNG = seed,
+            .packages = "treerabid") %dorng% {
+              weights_sim <- sim_generations(t_diff, si_fun, params,
+                                             max_kappa = max_max_kappa,
+                                             kappa_weights = TRUE)
+              candidate_pis[which.min(colSums((weights_sim - candidate_weights)^2))]
+
+            }
 
   return(out)
 

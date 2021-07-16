@@ -5,7 +5,15 @@
 \title{Fit detection probability given observed time differences between linked cases
 and a serial interval distribution}
 \usage{
-fit_sims_pi(t_diff, nsims = 1000, candidate_pis, si_fun, params, alpha = 0.001)
+fit_sims_pi(
+  t_diff,
+  nsims = 1000,
+  candidate_pis,
+  si_fun,
+  params,
+  alpha = 0.001,
+  seed = 132
+)
 }
 \arguments{
 \item{t_diff}{the observed time differences between linked cases}
