@@ -37,6 +37,6 @@ either a vector of the simulated generations or a vector of proportions of 1:max
 \description{
 This is based on Cori et al. 2019
 (https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1006554),
-which works out analytical expectations of the number of observed generations
+which works out analytical expectations of the number of unobserved generations
 between linked cases given a detection probaility.
 }
