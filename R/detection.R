@@ -22,7 +22,7 @@
 #'
 #' @return either a vector of the simulated generations or a vector of proportions of 1:max_kappa
 #' @importFrom matrixStats rowCumsums
-#' @importFrom Rfast rowMins
+#' @importFrom Rfast rowMaxs
 #' @export
 #'
 #'
