@@ -302,22 +302,15 @@ get_gr <- function(links) {
 
 }
 
-
 #' Helper function to check for loops
 #'
 #' @param links either the consensus links or a single tree (with
 #'  cols id_case & id_progen)
-#' @param max_cycles how many cycles to look for in the graph
-#'  can be really slow if lots of uncertainty in the dates!
 #'
 #' @return a vector of case ids which are part of a loop in the tree
-#'
-#' @importFrom igraph V subgraph.edges E count_multiple girth components
-#'  vertex_attr graph_from_data_frame
-#'
 #' @export
 #'
-check_loops <- function(links, max_cycles = 1000) {
+check_loops <- function(links) {
 
   # build undirected & find the loops (which_multiple) & any cycles (girth)
   gr <- graph_from_data_frame(d = links[, c("id_case",
@@ -325,11 +318,7 @@ check_loops <- function(links, max_cycles = 1000) {
                               vertices = links[, "id_case"],
                               directed = FALSE)
   loops <- names(V(subgraph.edges(gr, E(gr)[count_multiple(gr) > 1])))
-
-  for(i in seq_len(max_cycles)) {
-    cycles <- names(girth(gr)$circle)
-
-  }
+  loops <- as.numeric(c(loops, names(girth(gr)$circle)))
 
   return(loops)
 }
