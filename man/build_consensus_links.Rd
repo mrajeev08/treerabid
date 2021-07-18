@@ -8,7 +8,8 @@ build_consensus_links(
   links_all,
   case_dates,
   lineages = NULL,
-  known_progens = NULL
+  known_progens = NULL,
+  max_cycles = 100
 )
 }
 \arguments{
@@ -21,6 +22,9 @@ build_consensus_links(
 assignment for each case, defaults to NULL which means trees wont be resolved to a phylogeny}
 
 \item{known_progens}{a numeric vector of case ids for which progenitors are known}
+
+\item{max_cycles}{how many cycles to look for (if lots of date uncertainty
+you may want to increase this but it will likely slow things down a lot!)}
 }
 \value{
 a data.table with the case pairs most often linked in transmission tree and their

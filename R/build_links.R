@@ -26,6 +26,8 @@ build_all_links <- function(ttrees, N) {
 #' @param lineages a data table with two columns, id_case and lineage, designating a lineage
 #'  assignment for each case, defaults to NULL which means trees wont be resolved to a phylogeny
 #' @param known_progens a numeric vector of case ids for which progenitors are known
+#' @param max_cycles how many cycles to look for (if lots of date uncertainty
+#'  you may want to increase this but it will likely slow things down a lot!)
 #'
 #' @return a data.table with the case pairs most often linked in transmission tree and their
 #'  probability (i.e. prop of times a given case was selected as a progenitor)
@@ -34,7 +36,8 @@ build_all_links <- function(ttrees, N) {
 build_consensus_links <- function(links_all,
                                   case_dates,
                                   lineages = NULL,
-                                  known_progens = NULL) {
+                                  known_progens = NULL,
+                                  max_cycles = 100) {
 
   # Get the consensus links
   links_consensus <- links_all[links_all[, .I[which.max(links)], by = c("id_case")]$V1] # returns first max
@@ -48,7 +51,7 @@ build_consensus_links <- function(links_all,
 
   # First fix the loops
   list2env(find_loops_to_fix(links_consensus, case_dates,
-                             known_progens), envir = environment())
+                             known_progens, max_cycles = max_cycles), envir = environment())
 
   # set links to fix to NA
   links_consensus[id_case %in% loops_to_fix]$id_progen <- NA

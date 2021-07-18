@@ -13,6 +13,9 @@ find_loops_to_fix(links_consensus, case_dates, known_progens, max_cycles = 100)
 (date symptoms started of case without uncertainty)}
 
 \item{known_progens}{a numeric vector of case ids for which progenitors are known}
+
+\item{max_cycles}{how many cycles to look for (if lots of date uncertainty
+you may want to increase this but it will likely slow things down a lot!)}
 }
 \value{
 a numeric vector of case ids for which links should be reassigned
