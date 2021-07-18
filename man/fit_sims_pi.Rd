@@ -13,7 +13,8 @@ fit_sims_pi(
   params,
   alpha = 0.001,
   known_kappas = NULL,
-  seed = 132
+  seed = 132,
+  sort = TRUE
 )
 }
 \arguments{
@@ -50,18 +51,17 @@ and a serial interval distribution
 
 \dontrun{
 system.time({
-tt <- rbindlist(lapply(seq(0.01, 0.99, by = 0.05), function(z) {
-    rbindlist(lapply(seq_len(5), function(x) {
-    t_diff <- sim_times_pi(si_fun_lnorm, nobs = 572, params = treerabid::params_treerabid, alpha = 0.01,
+tt <- rbindlist(lapply(runif(1000), function(z) {
+    t_diff <- sim_times_pi(si_fun_lnorm, nobs = 500, params = treerabid::params_treerabid, alpha = 0.01,
                           pi = z)
     ests <- fit_sims_pi(t_diff, nsims = 5, candidate_pis = seq(0.01, 0.99, by = 0.01),
                        si_fun_lnorm, params = treerabid::params_treerabid, alpha = 0.01)
-    data.table(true = z, estimated = ests, sim = x)}))
- }))
+    data.table(true = z, estimated = ests)}))
+ })
 
 plot(tt$true, tt$estimated)
 abline(a = 0, b = 1, col = "red") # the 1:1 line
 }
-}
+
 
 }

@@ -22,29 +22,32 @@
 #'
 #' @return either a vector of the simulated generations or a vector of proportions of 1:max_kappa
 #' @importFrom matrixStats rowCumsums
-#' @importFrom Rfast rowMaxs
+#' @importFrom Rfast rowMins
 #' @export
 #'
 #'
 sim_generations <- function(t_diff, si_fun, params, max_kappa = 100,
-                            kappa_weights = TRUE, known_kappas = NULL) {
+                            kappa_weights = TRUE, known_kappas = NULL,
+                            sort = FALSE) {
 
   if(!is.null(known_kappas)) {
     t_diff <- t_diff[known_kappas == 0]
   }
+
   nr <- length(t_diff)
   vals <- si_fun(nr * max_kappa, params)
   out <- matrix(vals, nrow = nr)
 
   # starting one sorted from min to max (closest poss match in high rep scenario)
-  t_diff <- sort(t_diff)
-  out[, 1] <- sort(out[, 1])
+  if(sort) {
+    t_diff <- sort(t_diff)
+    out[, 1] <- sort(out[, 1])
+  }
 
   # get the difference
   out_sum <- rowCumsums(out) - t_diff # get the diff
   out_sum[out_sum > 0] <- -Inf
-  gens <- rowMaxs(out_sum) # select the one before it's exceeded
-  gens[is.na(gens)] <- 1
+  gens <- rowMaxs(out_sum) # select the one closest to
 
   if(!is.null(known_kappas)) {
     known_kappas[known_kappas == 0] <- gens
@@ -118,24 +121,23 @@ sim_times_pi <- function(si_fun, nobs, params, alpha = 0.001, pi) {
 #'
 #' \dontrun{
 #' system.time({
-#' tt <- rbindlist(lapply(seq(0.01, 0.99, by = 0.05), function(z) {
-#'     rbindlist(lapply(seq_len(5), function(x) {
-#'     t_diff <- sim_times_pi(si_fun_lnorm, nobs = 572, params = treerabid::params_treerabid, alpha = 0.01,
+#' tt <- rbindlist(lapply(runif(1000), function(z) {
+#'     t_diff <- sim_times_pi(si_fun_lnorm, nobs = 500, params = treerabid::params_treerabid, alpha = 0.01,
 #'                           pi = z)
 #'     ests <- fit_sims_pi(t_diff, nsims = 5, candidate_pis = seq(0.01, 0.99, by = 0.01),
 #'                        si_fun_lnorm, params = treerabid::params_treerabid, alpha = 0.01)
-#'     data.table(true = z, estimated = ests, sim = x)}))
-#'  }))
+#'     data.table(true = z, estimated = ests)}))
+#'  })
 #'
 #' plot(tt$true, tt$estimated)
 #' abline(a = 0, b = 1, col = "red") # the 1:1 line
 #' }
-#' }
+#'
 #'
 fit_sims_pi <- function(t_diff, nsims = 1000,
                         candidate_pis, si_fun, params, alpha = 0.001,
                         known_kappas = NULL,
-                        seed = 132) {
+                        seed = 132, sort = TRUE) {
 
   max_max_kappa <- get_kappa(alpha, pi = min(candidate_pis))
 
@@ -150,7 +152,8 @@ fit_sims_pi <- function(t_diff, nsims = 1000,
             .packages = "treerabid") %dorng% {
               weights_sim <- sim_generations(t_diff, si_fun, params,
                                              max_kappa = max_max_kappa,
-                                             kappa_weights = TRUE, known_kappas)
+                                             kappa_weights = TRUE, known_kappas,
+                                             sort)
               candidate_pis[which.min(colSums((weights_sim - candidate_weights)^2))]
 
             }
