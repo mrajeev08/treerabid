@@ -487,6 +487,7 @@ get_membership <- function(links) {
 #'
 #' @param links_consensus output from `build_consensus_links`
 #' @param ttrees  bootstrapped trees from `boot_trees`
+#' @param links_all the links summarized over the trees from `build_all_links`
 #' @param type how to summarize the trees, either majority rule or Maximum clade
 #'  credibility-ish
 #'
@@ -494,7 +495,7 @@ get_membership <- function(links) {
 #'  1 if the consensus link, 0 if not.
 #' @export
 #'
-build_consensus_tree <- function(links_consensus, ttrees, links_all = NULL,
+build_consensus_tree <- function(links_consensus, ttrees, links_all,
                                  type = c("majority", "mcc")) {
   type <- match.arg(type)
   tree_consensus <- links_all[ttrees, on = c("id_progen", "id_case")]

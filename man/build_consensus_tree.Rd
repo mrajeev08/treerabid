@@ -7,7 +7,7 @@
 build_consensus_tree(
   links_consensus,
   ttrees,
-  links_all = NULL,
+  links_all,
   type = c("majority", "mcc")
 )
 }
@@ -15,6 +15,8 @@ build_consensus_tree(
 \item{links_consensus}{output from \code{build_consensus_links}}
 
 \item{ttrees}{bootstrapped trees from \code{boot_trees}}
+
+\item{links_all}{the links summarized over the trees from \code{build_all_links}}
 
 \item{type}{how to summarize the trees, either majority rule or Maximum clade
 credibility-ish}
