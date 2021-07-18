@@ -19,6 +19,8 @@
 #'  the weights (i.e. the proportion of cases separated by 1:max_kappa generations)
 #' @param known_kappas vector of known kappas (i.e. if some cases are traced, you know
 #'  kappa = 1 for these cases)
+#' @param sort whether to sort the first column and t_diff to weight towards kappa = 1
+#'  to deal with higher sensitivity at higher reporting thresholds
 #'
 #' @return either a vector of the simulated generations or a vector of proportions of 1:max_kappa
 #' @importFrom matrixStats rowCumsums
@@ -28,7 +30,7 @@
 #'
 sim_generations <- function(t_diff, si_fun, params, max_kappa = 100,
                             kappa_weights = TRUE, known_kappas = NULL,
-                            sort = FALSE) {
+                            sort = TRUE) {
 
   if(!is.null(known_kappas)) {
     t_diff <- t_diff[known_kappas == 0]

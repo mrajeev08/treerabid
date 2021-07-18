@@ -12,7 +12,7 @@ sim_generations(
   max_kappa = 100,
   kappa_weights = TRUE,
   known_kappas = NULL,
-  sort = FALSE
+  sort = TRUE
 )
 }
 \arguments{
@@ -31,6 +31,9 @@ the weights (i.e. the proportion of cases separated by 1:max_kappa generations)}
 
 \item{known_kappas}{vector of known kappas (i.e. if some cases are traced, you know
 kappa = 1 for these cases)}
+
+\item{sort}{whether to sort the first column and t_diff to weight towards kappa = 1
+to deal with higher sensitivity at higher reporting thresholds}
 }
 \value{
 either a vector of the simulated generations or a vector of proportions of 1:max_kappa
