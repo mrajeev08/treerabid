@@ -146,13 +146,13 @@ build_tree <- function(id_case,
     # Get the dist cutoff if pruning (either length 1 or length nrow(case_dt))
     dist_cutoff <- dist_fun(ttree = ttree, cutoff = dist_cut, params = params)
     ttree <- ttree[dist_diff <= dist_cutoff]
-
-    # and assign incursions as cases where no progenitor was identified
-    # based on the distance OR time cutoffs
-    incursions <- case_dt[!(case_dt$id_case %in% ttree$id_case)][, -"join"]
-  } else {
-    incursions <- NULL # otherwise don't return incursions because you're not assigning them
   }
+
+  # and assign incursions as cases where no progenitor was identified
+  # based on the distance OR time cutoffs
+  # and also even if not pruning, the first case in the dataset will
+  # not be assigned a link so need to include it in the tree here
+  incursions <- case_dt[!(case_dt$id_case %in% ttree$id_case)][, -"join"]
 
   # This is actually the slow part so limiting # of possibilities speeds things up a lot
   # Also joins up with known tree and incursions
@@ -397,11 +397,18 @@ list_funs <- function(filename) {
 #' @param exp_pkgs packages to export to foreach loop, defaults to
 #'  data.table and treerabid, if other dependencies for si_fun or
 #'  dist_fun, then pass here. May be needed for
-#'  certain types of cluster configs,
+#'  certain types of cluster configs
+#' @param ncores the number of cores to parallelize over
+#'  (defaults to parallel::detectCores() - 1)
+#' @param chunk whether to chunk sims or not
+#'  (i.e. to increase efficiency of parallelization, may want to run 100/core vs.
+#'   1/core, as sims can be mem intensive,
+#'   best to try out on your architecture to see which one faster)
 #'
 #' @return a data.table with bootstrapped trees
 #' @importFrom foreach foreach
 #' @importFrom doRNG %dorng%
+#' @importFrom parallel detectCores
 #' @export
 #'
 boot_trees <- function(id_case,
@@ -424,7 +431,8 @@ boot_trees <- function(id_case,
                        seed = 1245,
                        exp_funs = NULL,
                        exp_pkgs = c("data.table", "treerabid", "igraph"),
-                       ncores = parallel::detectCores() - 1) {
+                       ncores = detectCores() - 1,
+                       chunk = TRUE) {
 
   if(any(is.na(x_coord) | is.na(y_coord) | is.na(date_symptoms))) {
     stop("Missing data in times or locations!")
@@ -465,10 +473,9 @@ boot_trees <- function(id_case,
 
   }
 
-  if(N <= ncores) {
+  if(N <= ncores | !chunk) {
     chnks <- N
-    grps <- seq(1, ncores)
-    sims <- seq(1, N)
+    grps <- sims <- seq(1, N)
   } else {
     chnks <- floor(N/ncores)
     sims <- seq(1, N)
