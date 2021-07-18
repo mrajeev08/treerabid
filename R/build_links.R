@@ -490,14 +490,20 @@ get_membership <- function(links) {
 #' @param links_all the links summarized over the trees from `build_all_links`
 #' @param type how to summarize the trees, either majority rule or Maximum clade
 #'  credibility-ish
+#' @param output whether to output the consensus tree or the sim number of the
+#'  consensus tree
 #'
 #' @return a data.table with the consensus tree (with score for each link,
 #'  1 if the consensus link, 0 if not.
 #' @export
 #'
 build_consensus_tree <- function(links_consensus, ttrees, links_all,
-                                 type = c("majority", "mcc")) {
+                                 type = c("majority", "mcc"),
+                                 output = c("tree", "sim")) {
+
   type <- match.arg(type)
+  output <- match.arg(output)
+
   tree_consensus <- links_all[ttrees, on = c("id_progen", "id_case")]
 
   if(type == "majority") {
@@ -508,10 +514,16 @@ build_consensus_tree <- function(links_consensus, ttrees, links_all,
                                  by = "sim"]
   }
 
-  tree_consensus <- tree_consensus[sim == sim_scores$sim[which.max(sim_scores$score)]]
-  best_pairs <- paste0(links_consensus$id_case, "_", links_consensus$id_progen)
-  tree_consensus[, score := fifelse(paste0(id_case, "_", id_progen) %in% best_pairs, 1, 0)]
+  if(output == "tree") {
+    tree_consensus <- tree_consensus[sim == sim_scores$sim[which.max(sim_scores$score)]]
+    best_pairs <- paste0(links_consensus$id_case, "_", links_consensus$id_progen)
+    tree_consensus[, score := fifelse(paste0(id_case, "_", id_progen) %in% best_pairs, 1, 0)]
 
-  return(tree_consensus)
+    return(tree_consensus)
+
+  } else {
+    return(sim_scores$sim[which.max(sim_scores$score)])
+  }
+
 }
 

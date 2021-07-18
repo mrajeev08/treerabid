@@ -8,7 +8,8 @@ build_consensus_tree(
   links_consensus,
   ttrees,
   links_all,
-  type = c("majority", "mcc")
+  type = c("majority", "mcc"),
+  output = c("tree", "sim")
 )
 }
 \arguments{
@@ -20,6 +21,9 @@ build_consensus_tree(
 
 \item{type}{how to summarize the trees, either majority rule or Maximum clade
 credibility-ish}
+
+\item{output}{whether to output the consensus tree or the sim number of the
+consensus tree}
 }
 \value{
 a data.table with the consensus tree (with score for each link,
