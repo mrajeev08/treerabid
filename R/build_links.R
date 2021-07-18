@@ -54,14 +54,10 @@ build_consensus_links <- function(links_all,
   links_consensus[id_case %in% loops_to_fix]$id_progen <- NA
   nfixes <- length(loops_to_fix)
 
-  if(nfixes > 1) {
-
-    pb  <- txtProgressBar(1, nfixes, style = 3)
-    message("Fixing loops:")
-    pr <- 0
+  if(nfixes > 0) {
 
     for(i in seq_len(nfixes)) {
-      pr <- pr + 1
+
       # Join up links with updated membership
       links_all <- membership_dt[links_all, on = "id_case"]
       setnames(membership_dt, c("membership", "id_case", "lineage_chain"),
@@ -98,7 +94,6 @@ build_consensus_links <- function(links_all,
       # update membership
       membership_dt <- get_membership(links_consensus)
 
-      setTxtProgressBar(pb, pr)
     }
   }
 
@@ -110,15 +105,11 @@ build_consensus_links <- function(links_all,
   links_consensus[id_case %in% lins_to_fix]$id_progen <- NA
   nfixes <- length(lins_to_fix)
 
-  if(nfixes > 1) {
-
-    pb  <- txtProgressBar(1, nfixes, style = 3)
-    message("Fixing mismatched lineages:")
-    pr <- 0
+  if(nfixes > 0) {
 
     # Fix in order of least -> most likely
     for(i in seq_len(nfixes)) {
-      pr <- pr + 1
+
       # Join up links with updated membership_dt
       links_all <- membership_dt[links_all, on = "id_case"]
       setnames(membership_dt, c("membership", "id_case", "lineage_chain"),
@@ -155,7 +146,6 @@ build_consensus_links <- function(links_all,
       # update membership_dt
       membership_dt <- get_membership(links_consensus)
 
-      setTxtProgressBar(pb, pr)
     }
   }
 

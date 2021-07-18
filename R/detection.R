@@ -47,7 +47,7 @@ sim_generations <- function(t_diff, si_fun, params, max_kappa = 100,
   # get the difference
   out_sum <- rowCumsums(out) - t_diff # get the diff
   out_sum[out_sum > 0] <- -Inf
-  gens <- rowMaxs(out_sum) # select the one closest to
+  gens <- rowMaxs(out_sum) # select the one before tdiff exceeded
 
   if(!is.null(known_kappas)) {
     known_kappas[known_kappas == 0] <- gens

@@ -250,15 +250,12 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
     ttree[id_case %in% lins_to_fix]$id_progen <- NA
     nfixes <- length(lins_to_fix)
 
-    if(nfixes > 1) {
-
-      pb  <- txtProgressBar(1, nfixes, style = 3)
-      message("\n Fixing mismatched lineages:")
+    if(nfixes > 0) {
 
       rfixes <- sample(nfixes, nfixes) # fix in random order
-      pr <- 0
+
       for(i in rfixes) {
-        pr <- pr + 1
+
         # Join up links with updated membership_dt
         tree <- membership_dt[tree, on = "id_case"]
         setnames(membership_dt, c("membership", "id_case", "lineage_chain"),
@@ -301,7 +298,6 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
         # update membership_dt
         membership_dt <- get_membership(ttree)
 
-        setTxtProgressBar(pb, pr)
       }
     }
 
