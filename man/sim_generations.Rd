@@ -11,7 +11,8 @@ sim_generations(
   params,
   max_kappa = 100,
   kappa_weights = TRUE,
-  known_kappas = NULL
+  known_kappas = NULL,
+  sort = FALSE
 )
 }
 \arguments{
