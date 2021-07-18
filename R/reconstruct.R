@@ -235,6 +235,10 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
     # Bind to incursions & known tree (can be NULL)
     ttree <- rbindlist(list(incursions, k_tree, ttree), fill = TRUE)
 
+    if(is.null(lineages)) {
+      lineages <- data.table(id_case = links_consensus$id_case, lineage = 0)
+    }
+
     # Check which ones have mismatched lineages
     ttree <- ttree[lineages, on = "id_case"]
     tree <- tree[lineages, on = "id_case"]
