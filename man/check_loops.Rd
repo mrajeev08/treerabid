@@ -4,11 +4,14 @@
 \alias{check_loops}
 \title{Helper function to check for loops}
 \usage{
-check_loops(links)
+check_loops(links, max_cycles = 1000)
 }
 \arguments{
 \item{links}{either the consensus links or a single tree (with
 cols id_case & id_progen)}
+
+\item{max_cycles}{how many cycles to look for in the graph
+can be really slow if lots of uncertainty in the dates!}
 }
 \value{
 a vector of case ids which are part of a loop in the tree

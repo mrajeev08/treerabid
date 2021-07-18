@@ -198,42 +198,49 @@ build_consensus_links <- function(links_all,
 #' @keywords internal
 #'
 find_loops_to_fix <- function(links_consensus, case_dates,
-                              known_progens) {
+                              known_progens, max_cycles = 100) {
 
   # build undirected & find the loops (which_multiple) & any cycles (girth)
   gr <- get_gr(links_consensus)
 
   loops <- check_loops(links_consensus)
+  loops_to_fix_all <- character(0)
+  iter <- 0
+  while(iter < max_cycles & length(loops) > 0) {
+    # Get the chain membership
+    V(gr)$membership <- components(gr)$membership
+    membership_dt <- data.table(membership = as.numeric(vertex_attr(gr, "membership")),
+                             id_case = as.numeric(vertex_attr(gr, "name")))
+    links_consensus <- links_consensus[membership_dt, on = "id_case"]
 
-  # Get the chain membership
-  V(gr)$membership <- components(gr)$membership
-  membership_dt <- data.table(membership = as.numeric(vertex_attr(gr, "membership")),
-                           id_case = as.numeric(vertex_attr(gr, "name")))
-  links_consensus <- links_consensus[membership_dt, on = "id_case"]
+    if(is.null(case_dates)) {
+      stop("Need to pass case_dates data.table to fix loops by date.")
+    }
 
-  if(is.null(case_dates)) {
-    stop("Need to pass case_dates data.table to fix loops by date.")
+    # join with case dates
+    links_consensus <- links_consensus[case_dates, on = "id_case"]
+
+    # Filter to the ones with loops
+    # & filter out any that are known from contact tracing
+    loops_to_fix <- links_consensus[id_case %in% loops & !(id_case %in% known_progens)]
+
+    # Find the minimum selector case date
+    loops_to_fix <- loops_to_fix[loops_to_fix[, .I[which.min(symptoms_started)],
+                                              by = c("membership")]$V1]
+    loops_to_fix <- loops_to_fix[order(symptoms_started)]$id_case
+    loops_to_fix_all <- c(loops_to_fix_all, as.numeric(unique(loops_to_fix)))
+
+    # Update links consensus and get new membership
+    links_consensus[id_case %in% loops_to_fix]$id_progen <- NA
+
+    loops <- check_loops(links_consensus)
+
+    membership_dt <- get_membership(links_consensus)
+
+    iter <- iter + 1
   }
 
-  # join with case dates
-  links_consensus <- links_consensus[case_dates, on = "id_case"]
-
-  # Filter to the ones with loops
-  # & filter out any that are known from contact tracing
-  loops_to_fix <- links_consensus[id_case %in% loops & !(id_case %in% known_progens)]
-
-  # Find the minimum selector case date
-  loops_to_fix <- loops_to_fix[loops_to_fix[, .I[which.min(symptoms_started)],
-                                            by = c("membership")]$V1]
-  loops_to_fix <- loops_to_fix[order(symptoms_started)]$id_case
-  loops_to_fix <- as.numeric(unique(loops_to_fix))
-
-  # Update links consensus and get new membership
-  links_consensus[id_case %in% loops_to_fix]$id_progen <- NA
-
-  membership_dt <- get_membership(links_consensus)
-
-  return(list(membership_dt = membership_dt, loops_to_fix = loops_to_fix))
+  return(list(membership_dt = membership_dt, loops_to_fix = loops_to_fix_all))
 }
 
 
@@ -300,6 +307,8 @@ get_gr <- function(links) {
 #'
 #' @param links either the consensus links or a single tree (with
 #'  cols id_case & id_progen)
+#' @param max_cycles how many cycles to look for in the graph
+#'  can be really slow if lots of uncertainty in the dates!
 #'
 #' @return a vector of case ids which are part of a loop in the tree
 #'
@@ -308,16 +317,19 @@ get_gr <- function(links) {
 #'
 #' @export
 #'
-check_loops <- function(links) {
+check_loops <- function(links, max_cycles = 1000) {
 
   # build undirected & find the loops (which_multiple) & any cycles (girth)
   gr <- graph_from_data_frame(d = links[, c("id_case",
                                             "id_progen")][!is.na((id_progen))],
                               vertices = links[, "id_case"],
                               directed = FALSE)
-
   loops <- names(V(subgraph.edges(gr, E(gr)[count_multiple(gr) > 1])))
-  loops <- as.numeric(c(loops, names(girth(gr)$circle)))
+
+  for(i in seq_len(max_cycles)) {
+    cycles <- names(girth(gr)$circle)
+
+  }
 
   return(loops)
 }

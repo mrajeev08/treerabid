@@ -4,7 +4,7 @@
 \alias{find_loops_to_fix}
 \title{Internal function for finding loops to fix}
 \usage{
-find_loops_to_fix(links_consensus, case_dates, known_progens)
+find_loops_to_fix(links_consensus, case_dates, known_progens, max_cycles = 100)
 }
 \arguments{
 \item{links_consensus}{consensus links build within build_consensus_links function}
