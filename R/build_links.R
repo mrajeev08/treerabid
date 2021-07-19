@@ -204,16 +204,13 @@ find_loops_to_fix <- function(links_consensus, case_dates,
                               known_progens, max_cycles = 100) {
 
   # build undirected & find the loops (which_multiple) & any cycles (girth)
-  gr <- get_gr(links_consensus)
-
   loops <- check_loops(links_consensus)
   loops_to_fix_all <- character(0)
   iter <- 0
+  membership_dt <- get_membership(links_consensus)
+
   while(iter < max_cycles & length(loops) > 0) {
-    # Get the chain membership
-    V(gr)$membership <- components(gr)$membership
-    membership_dt <- data.table(membership = as.numeric(vertex_attr(gr, "membership")),
-                             id_case = as.numeric(vertex_attr(gr, "name")))
+
     links_consensus <- links_consensus[membership_dt, on = "id_case"]
 
     if(is.null(case_dates)) {
