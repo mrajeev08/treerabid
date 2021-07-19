@@ -233,3 +233,31 @@ dist_lnorm2 <- function(ttree, params, cutoff = NULL) {
     qlnorm(cutoff, meanlog = params$DK2_meanlog, sdlog = params$DK2_sdlog)
   }
 }
+
+#' Baseline weibull serial interval
+#'
+#' See ?si_gamma1 for more details.
+#'
+#' @export
+si_weibull1 <- function(ttree, params, cutoff = NULL) {
+  if(is.null(cutoff)) {
+    ttree[, t_prob := dgamma(t_diff, shape = params$SI_shape_weibull, scale = params$SI_scale_weibull)]
+  } else {
+    # return the cutoff value given a prob
+    qgamma(cutoff, shape = params$SI_shape_weibull, scale = params$SI_scale_weibull)
+  }
+}
+
+#' Baseline weibull serial interval
+#'
+#' See ?si_gamma1 for more details.
+#'
+#' @export
+si_weibull2 <- function(ttree, params, cutoff = NULL) {
+  if(is.null(cutoff)) {
+    ttree[, t_prob := dgamma(t_diff, shape = params$SI2_shape_weibull, scale = params$SI2_scale_weibull)]
+  } else {
+    # return the cutoff value given a prob (either length 1 or length of the ttree)
+    qgamma(cutoff, shape = params$SI2_shape_weibull, scale = params$SI2_scale_weibull)
+  }
+}
