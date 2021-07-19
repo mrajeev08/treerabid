@@ -24,9 +24,7 @@ boot_trees(
   N = 1,
   seed = 1245,
   exp_funs = NULL,
-  exp_pkgs = c("data.table", "treerabid", "igraph"),
-  ncores = detectCores() - 1,
-  chunk = TRUE
+  exp_pkgs = c("data.table", "treerabid", "igraph")
 )
 }
 \arguments{
@@ -84,14 +82,6 @@ for certain types of cluster configs}
 data.table and treerabid, if other dependencies for si_fun or
 dist_fun, then pass here. May be needed for
 certain types of cluster configs}
-
-\item{ncores}{the number of cores to parallelize over
-(defaults to parallel::detectCores() - 1)}
-
-\item{chunk}{whether to chunk sims or not
-(i.e. to increase efficiency of parallelization, may want to run 100/core vs.
-1/core, as sims can be mem intensive,
-best to try out on your architecture to see which one faster)}
 }
 \value{
 a data.table with bootstrapped trees

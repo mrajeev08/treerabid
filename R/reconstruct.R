@@ -398,17 +398,10 @@ list_funs <- function(filename) {
 #'  data.table and treerabid, if other dependencies for si_fun or
 #'  dist_fun, then pass here. May be needed for
 #'  certain types of cluster configs
-#' @param ncores the number of cores to parallelize over
-#'  (defaults to parallel::detectCores() - 1)
-#' @param chunk whether to chunk sims or not
-#'  (i.e. to increase efficiency of parallelization, may want to run 100/core vs.
-#'   1/core, as sims can be mem intensive,
-#'   best to try out on your architecture to see which one faster)
 #'
 #' @return a data.table with bootstrapped trees
 #' @importFrom foreach foreach
 #' @importFrom doRNG %dorng%
-#' @importFrom parallel detectCores
 #' @export
 #'
 boot_trees <- function(id_case,
@@ -430,9 +423,7 @@ boot_trees <- function(id_case,
                        N = 1,
                        seed = 1245,
                        exp_funs = NULL,
-                       exp_pkgs = c("data.table", "treerabid", "igraph"),
-                       ncores = detectCores() - 1,
-                       chunk = TRUE) {
+                       exp_pkgs = c("data.table", "treerabid", "igraph")) {
 
   if(any(is.na(x_coord) | is.na(y_coord) | is.na(date_symptoms))) {
     stop("Missing data in times or locations!")
@@ -473,46 +464,28 @@ boot_trees <- function(id_case,
 
   }
 
-  if(N <= ncores | !chunk) {
-    chnks <- N
-    grps <- sims <- seq(1, N)
-  } else {
-    chnks <- floor(N/ncores)
-    sims <- seq(1, N)
-    grps <- rep(seq(1, chnks), N)[1:length(sims)]
-  }
-
-  foreach(i = seq_len(chnks),
+  foreach(i = seq_len(N),
           .combine = 'rbind', .options.RNG = seed,
           .export = exp_funs,
           .packages = exp_pkgs) %dorng% {
 
-          nsims <- sims[grps == i]
-
-          rbindlist(
-            lapply(
-              nsims,
-              function (x) {
-                ttree <-
-                  build_tree(id_case = id_case, id_biter = id_biter, y_coord = y_coord,
-                             x_coord = x_coord,
-                             owned = owned, date_symptoms = date_symptoms,
-                             days_uncertain = days_uncertain,
-                             exclude_progen = exclude_progen,
-                             use_known_source = use_known_source,
-                             known_tree = known_tree,
-                             lineages = lineages,
-                             prune = prune,
-                             si_fun,
-                             dist_fun,
-                             cutoff = cutoff,
-                             params = params,
-                             min_time = min_time)
-                ttree$sim <- x
-                ttree
-              }
-            )
-          )
-    }
+          ttree <-
+            build_tree(id_case = id_case, id_biter = id_biter, y_coord = y_coord,
+                       x_coord = x_coord,
+                       owned = owned, date_symptoms = date_symptoms,
+                       days_uncertain = days_uncertain,
+                       exclude_progen = exclude_progen,
+                       use_known_source = use_known_source,
+                       known_tree = known_tree,
+                       lineages = lineages,
+                       prune = prune,
+                       si_fun,
+                       dist_fun,
+                       cutoff = cutoff,
+                       params = params,
+                       min_time = min_time)
+          ttree$sim <- i
+          ttree
+      }
 
 }
