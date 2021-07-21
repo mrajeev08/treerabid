@@ -44,6 +44,10 @@ build_consensus_links <- function(links_all,
                                   max_cycles = 100,
                                   link_all = FALSE) {
 
+  if(link_all == TRUE) {
+    links_all <- links_all[!is.na(id_progen)]
+  }
+
   # Get the consensus links
   links_consensus <- links_all[links_all[, .I[which.max(links)], by = c("id_case")]$V1] # returns first max
 
@@ -53,10 +57,6 @@ build_consensus_links <- function(links_all,
 
   links_consensus <- links_consensus[lineages, on = "id_case"]
   links_all <- links_all[lineages, on = "id_case"]
-
-  if(link_all == TRUE) {
-    links_all <- links_all[!is.na(id_progen)]
-  }
 
   # first fix the lineages
   list2env(find_lins_to_fix(links_consensus, known_progens,
