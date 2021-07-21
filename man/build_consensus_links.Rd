@@ -9,7 +9,8 @@ build_consensus_links(
   case_dates,
   lineages = NULL,
   known_progens = NULL,
-  max_cycles = 100
+  max_cycles = 100,
+  link_all = FALSE
 )
 }
 \arguments{
@@ -25,6 +26,11 @@ assignment for each case, defaults to NULL which means trees wont be resolved to
 
 \item{max_cycles}{how many cycles to look for (if lots of date uncertainty
 you may want to increase this but it will likely slow things down a lot!)}
+
+\item{link_all}{whether you want to try and force links between cases (that is
+even if a case is often identified as the beginning of a chain, you want to
+see if it can be assigned to another progenitor, i.e. when trying to link
+up all cases to a sampled set of lineages)}
 }
 \value{
 a data.table with the case pairs most often linked in transmission tree and their

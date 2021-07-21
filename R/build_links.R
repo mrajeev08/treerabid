@@ -28,6 +28,10 @@ build_all_links <- function(ttrees, N) {
 #' @param known_progens a numeric vector of case ids for which progenitors are known
 #' @param max_cycles how many cycles to look for (if lots of date uncertainty
 #'  you may want to increase this but it will likely slow things down a lot!)
+#' @param link_all whether you want to try and force links between cases (that is
+#'  even if a case is often identified as the beginning of a chain, you want to
+#'  see if it can be assigned to another progenitor, i.e. when trying to link
+#'  up all cases to a sampled set of lineages)
 #'
 #' @return a data.table with the case pairs most often linked in transmission tree and their
 #'  probability (i.e. prop of times a given case was selected as a progenitor)
@@ -37,7 +41,8 @@ build_consensus_links <- function(links_all,
                                   case_dates,
                                   lineages = NULL,
                                   known_progens = NULL,
-                                  max_cycles = 100) {
+                                  max_cycles = 100,
+                                  link_all = FALSE) {
 
   # Get the consensus links
   links_consensus <- links_all[links_all[, .I[which.max(links)], by = c("id_case")]$V1] # returns first max
@@ -49,6 +54,9 @@ build_consensus_links <- function(links_all,
   links_consensus <- links_consensus[lineages, on = "id_case"]
   links_all <- links_all[lineages, on = "id_case"]
 
+  if(link_all) {
+    links_all <- links_all[is.na(id_progen)]
+  }
 
   # first fix the lineages
   list2env(find_lins_to_fix(links_consensus, known_progens,
