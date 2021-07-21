@@ -54,8 +54,8 @@ build_consensus_links <- function(links_all,
   links_consensus <- links_consensus[lineages, on = "id_case"]
   links_all <- links_all[lineages, on = "id_case"]
 
-  if(link_all) {
-    links_all <- links_all[is.na(id_progen)]
+  if(link_all == TRUE) {
+    links_all <- links_all[!is.na(id_progen)]
   }
 
   # first fix the lineages
