@@ -183,7 +183,7 @@ build_consensus_links <- function(links_all,
 
   }
 
-  if(nrow(lins_to_fix > 0)) {
+  if(nrow(lins_to_fix) > 0) {
     warning(
       "Couldn't completely resolve tree to phylogeny, try increasing the number
         of bootstrapped trees or max_tries.")
