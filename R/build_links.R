@@ -44,8 +44,9 @@ build_consensus_links <- function(links_all,
                                   max_cycles = 100,
                                   link_all = FALSE) {
 
+  links_backup <- links_all[is.na(id_progen)]
+
   if(link_all == TRUE) {
-    links_backup <- links_all[is.na(id_progen)]
     links_all <- links_all[!is.na(id_progen)]
   }
 
