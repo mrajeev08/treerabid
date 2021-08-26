@@ -71,12 +71,11 @@ si_lnorm2 <- function(ttree, params, cutoff = NULL) {
 #' @export
 dist_gamma_mixed <- function(ttree, params, cutoff = NULL) {
   if(is.null(cutoff)) {
-    ttree[, dist_prob := fcase(owned & dist_diff > 100,
-                               dgamma(dist_diff, shape= params$DK_shape, scale = params$DK_scale),
-                               !owned & dist_diff > 100,
-                               dgamma(dist_diff, shape= params$DK2_shape, scale = params$DK2_scale),
-                               dist_diff <= 100,
-                               pgamma(100, shape = params$DK_shape, scale = params$DK_scale)/100)]
+    ttree[, dist_diff_c := ifelse(dist_diff < 100, 100, dist_diff)]
+    ttree[, dist_prob := fifelse(owned,
+                               dgamma(dist_diff_c, shape= params$DK_shape, scale = params$DK_scale),
+                               dgamma(dist_diff_c, shape= params$DK2_shape, scale = params$DK2_scale))]
+    ttree[, dist_diff_c := NULL]
   } else {
     # return the cutoff value given a prob (either length 1 or length of the ttree)
     ifelse(ttree$owned, qgamma(cutoff, shape = params$DK_shape, scale = params$DK_scale),
@@ -91,15 +90,14 @@ dist_gamma_mixed <- function(ttree, params, cutoff = NULL) {
 #' @export
 dist_weibull_mixed <- function(ttree, params, cutoff = NULL) {
   if(is.null(cutoff)) {
-    ttree[, dist_prob := fcase(owned & dist_diff > 100,
-                               dweibull(dist_diff, shape= params$DK_shape_weibull,
-                                        scale = params$DK_scale_weibull),
-                               !owned & dist_diff > 100,
-                               dweibull(dist_diff, shape= params$DK2_shape_weibull,
-                                        scale = params$DK2_scale_weibull),
-                               dist_diff <= 100,
-                               pweibull(100, shape = params$DK_shape_weibull,
-                                        scale = params$DK_scale_weibull)/100)]
+
+    ttree[, dist_diff_c := fifelse(dist_diff < 100, 100, dist_diff)]
+    ttree[, dist_prob := fifelse(owned,
+                                 dweibull(dist_diff_c, shape= params$DK_shape_weibull,
+                                          scale = params$DK_scale_weibull),
+                                 dweibull(dist_diff_c, shape= params$DK2_shape_weibull,
+                                          scale = params$DK2_scale_weibull))]
+    ttree[, dist_diff_c := NULL]
   } else {
     # return the cutoff value given a prob (either length 1 or length of the ttree)
     ifelse(ttree$owned, qweibull(cutoff, shape = params$DK_shape_weibull,
@@ -115,12 +113,12 @@ dist_weibull_mixed <- function(ttree, params, cutoff = NULL) {
 #' @export
 dist_lnorm_mixed <- function(ttree, params, cutoff = NULL) {
   if(is.null(cutoff)) {
-    ttree[, dist_prob := fcase(owned & dist_diff > 100,
-                               dlnorm(dist_diff, meanlog =  params$DK_meanlog, sdlog = params$DK_sdlog),
-                               !owned & dist_diff > 100,
-                               dlnorm(dist_diff, meanlog = params$DK2_meanlog, sdlog = params$DK2_sdlog),
-                               dist_diff <= 100,
-                               plnorm(100, meanlog =  params$DK_meanlog, sdlog = params$DK_sdlog)/100)]
+
+    ttree[, dist_diff_c := fifelse(dist_diff < 100, 100, dist_diff)] # censor
+    ttree[, dist_prob := fifelse(owned,
+                                 dlnorm(dist_diff_c, meanlog =  params$DK_meanlog, sdlog = params$DK_sdlog),
+                                 dlnorm(dist_diff_c, meanlog =  params$DK2_meanlog, sdlog = params$DK2_sdlog))]
+    ttree[, dist_diff_c := NULL] # ditching censored distance difference
   } else {
     # return the cutoff value given a prob (either length 1 or length of the ttree)
     ifelse(ttree$owned, qlnorm(cutoff, meanlog = params$DK_meanlog, sdlog = params$DK_sdlog),
@@ -135,10 +133,9 @@ dist_lnorm_mixed <- function(ttree, params, cutoff = NULL) {
 #' @export
 dist_gamma1<- function(ttree, params, cutoff = NULL) {
   if(is.null(cutoff)) {
-    ttree[, dist_prob := fcase(dist_diff > 100,
-                               dgamma(dist_diff, shape= params$DK_shape, scale = params$DK_scale),
-                               dist_diff <= 100,
-                               pgamma(100, shape = params$DK_shape, scale = params$DK_scale)/100)]
+    ttree[, dist_prob := fifelse(dist_diff > 100,
+                                 dgamma(dist_diff, shape= params$DK_shape, scale = params$DK_scale),
+                                 dgamma(100, shape = params$DK_shape, scale = params$DK_scale))]
   } else {
     # return the cutoff value given a prob (either length 1 or length of the ttree)
     qgamma(cutoff, shape = params$DK_shape, scale = params$DK_scale)
@@ -152,12 +149,11 @@ dist_gamma1<- function(ttree, params, cutoff = NULL) {
 #' @export
 dist_weibull1<- function(ttree, params, cutoff = NULL) {
   if(is.null(cutoff)) {
-    ttree[, dist_prob := fcase(dist_diff > 100,
-                               dweibull(dist_diff, shape= params$DK_shape_weibull,
+    ttree[, dist_prob := fifelse(dist_diff > 100,
+                                 dweibull(dist_diff, shape= params$DK_shape_weibull,
                                         scale = params$DK_scale_weibull),
-                               dist_diff <= 100,
-                               pweibull(100, shape = params$DK_shape_weibull,
-                                        scale = params$DK_scale_weibull)/100)]
+                                 dweibull(100, shape = params$DK_shape_weibull,
+                                        scale = params$DK_scale_weibull))]
   } else {
     # return the cutoff value given a prob (either length 1 or length of the ttree)
     qweibull(cutoff, shape = params$DK_shape_weibull, scale = params$DK_scale_weibull)
@@ -171,10 +167,9 @@ dist_weibull1<- function(ttree, params, cutoff = NULL) {
 #' @export
 dist_lnorm1 <- function(ttree, params, cutoff = NULL) {
   if(is.null(cutoff)) {
-    ttree[, dist_prob := fcase(dist_diff > 100,
-                               dlnorm(dist_diff, meanlog =  params$DK_meanlog, sdlog = params$DK_sdlog),
-                               dist_diff <= 100,
-                               plnorm(100, meanlog =  params$DK_meanlog, sdlog = params$DK_sdlog)/100)]
+    ttree[, dist_prob := fifelse(dist_diff > 100,
+                                 dlnorm(dist_diff, meanlog =  params$DK_meanlog, sdlog = params$DK_sdlog),
+                                 dlnorm(100, meanlog =  params$DK_meanlog, sdlog = params$DK_sdlog))]
   } else {
     # return the cutoff value given a prob (either length 1 or length of the ttree)
     qlnorm(cutoff, meanlog = params$DK_meanlog, sdlog = params$DK_sdlog)
@@ -188,10 +183,9 @@ dist_lnorm1 <- function(ttree, params, cutoff = NULL) {
 #' @export
 dist_gamma2 <- function(ttree, params, cutoff = NULL) {
   if(is.null(cutoff)) {
-    ttree[, dist_prob := fcase(dist_diff > 100,
-                               dgamma(dist_diff, shape= params$DK2_shape, scale = params$DK2_scale),
-                               dist_diff <= 100,
-                               pgamma(100, shape = params$DK2_shape, scale = params$DK2_scale)/100)]
+    ttree[, dist_prob := fifelse(dist_diff > 100,
+                                 dgamma(dist_diff, shape= params$DK2_shape, scale = params$DK2_scale),
+                                 dgamma(100, shape = params$DK2_shape, scale = params$DK2_scale))]
   } else {
     # return the cutoff value given a prob (either length 1 or length of the ttree)
     qgamma(cutoff, shape = params$DK2_shape, scale = params$DK2_scale)
@@ -205,12 +199,11 @@ dist_gamma2 <- function(ttree, params, cutoff = NULL) {
 #' @export
 dist_weibull2 <- function(ttree, params, cutoff = NULL) {
   if(is.null(cutoff)) {
-    ttree[, dist_prob := fcase(dist_diff > 100,
-                               dweibull(dist_diff, shape= params$DK2_shape_weibull,
+    ttree[, dist_prob := fifelse(dist_diff > 100,
+                                 dweibull(dist_diff, shape= params$DK2_shape_weibull,
                                         scale = params$DK2_scale_weibull),
-                               dist_diff <= 100,
-                               pweibull(100, shape = params$DK2_shape_weibull,
-                                        scale = params$DK2_scale_weibull)/100)]
+                                 dweibull(100, shape = params$DK2_shape_weibull,
+                                        scale = params$DK2_scale_weibull))]
   } else {
     # return the cutoff value given a prob (either length 1 or length of the ttree)
     qweibull(cutoff, shape = params$DK2_shape_weibull, scale = params$DK2_scale_weibull)
@@ -224,10 +217,9 @@ dist_weibull2 <- function(ttree, params, cutoff = NULL) {
 #' @export
 dist_lnorm2 <- function(ttree, params, cutoff = NULL) {
   if(is.null(cutoff)) {
-    ttree[, dist_prob := fcase(dist_diff > 100,
-                               dlnorm(dist_diff, meanlog =  params$DK2_meanlog, sdlog = params$DK2_sdlog),
-                               dist_diff <= 100,
-                               plnorm(100, meanlog =  params$DK2_meanlog, sdlog = params$DK2_sdlog)/100)]
+    ttree[, dist_prob := fifelse(dist_diff > 100,
+                                 dlnorm(dist_diff, meanlog =  params$DK2_meanlog, sdlog = params$DK2_sdlog),
+                                 dlnorm(100, meanlog =  params$DK2_meanlog, sdlog = params$DK2_sdlog))]
   } else {
     # return the cutoff value given a prob (either length 1 or length of the ttree)
     qlnorm(cutoff, meanlog = params$DK2_meanlog, sdlog = params$DK2_sdlog)
