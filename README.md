@@ -3,12 +3,20 @@
 
 # treerabid
 
-*This is a work in progress that will break \| change \| may get
-rehomed!*
-
 `treerabid` reconstructs transmission trees using line list
 data–specifically in the context of contact tracing data for canine
 rabies in Tanzania for the Hampson Lab.
+
+It is still in active development and may get rehomed in the future.
+Before using, we highly recommend submitting an issue to this
+repository.
+
+For the package used in Mancy et al/Lushasi et al.:
+[![DOI](https://zenodo.org/badge/361056754.svg)](https://zenodo.org/badge/latestdoi/361056754)
+
+Or install version 1.0 from github:
+
+    devtools::install_github("mrajeev08/treerabid@v1.0", dependencies = TRUE)
 
 Based on: - [Hampson et al. 2009. Transmission Dynamics and Prospects
 for the Elimination of Canine
@@ -24,7 +32,7 @@ Install from github with:
 
 ``` r
 # install.packages("devtools")
-devtools::install_github("mrajeev08/treerabid")
+devtools::install_github("mrajeev08/treerabid", dependencies = TRUE)
 ```
 
 Dependencies: `data.table`, `foreach`, `doRNG`, `parallel` Suggests:
@@ -126,25 +134,25 @@ system.time({
 }
 )
 #>    user  system elapsed 
-#>   5.519   0.505   6.119
+#>   5.753   0.526   7.237
 
 # I_dt is the line list
 case_dt <- exe$I_dt
 head(case_dt)
 #>    id cell_id row_id progen_id path  x_coord y_coord invalid outbounds
-#> 1:  1    4770   3569         1    0 646572.8 9768948   FALSE     FALSE
-#> 2:  2    4771   3570         1    0 647683.1 9769405   FALSE     FALSE
-#> 3:  3    4771   3570         1    0 647907.0 9769365   FALSE     FALSE
-#> 4:  4    4936   3724         4    0 673186.3 9766966   FALSE     FALSE
-#> 5:  5    4770   3569         1    0 646557.5 9768968   FALSE     FALSE
-#> 6:  6    4840   3635         1    0 646752.4 9768735   FALSE     FALSE
+#> 1:  1    4038   2858         1    0 684947.9 9779932   FALSE     FALSE
+#> 2:  2    4108   2922         1    0 684816.5 9779009   FALSE     FALSE
+#> 3:  3    4108   2922         1    0 684679.2 9779345   FALSE     FALSE
+#> 4:  4    4108   2922         1    0 684609.9 9779400   FALSE     FALSE
+#> 5:  5    4108   2922         1    0 684479.0 9779641   FALSE     FALSE
+#> 6:  6    4246   3054         1    0 682803.2 9777702   FALSE     FALSE
 #>    t_infected contact infected t_infectious month detect_prob detected
-#> 1:   3.714286       S     TRUE     6.212036     1   0.8720671        1
-#> 2:   3.714286       S     TRUE     7.292879     1   0.8720671        1
-#> 3:   3.714286       S     TRUE     4.883252     1   0.8720671        1
-#> 4:   4.857143       S     TRUE    11.553531     2   0.9570016        1
-#> 5:   6.212036       S     TRUE    10.962706     2   0.9570016        1
-#> 6:   6.212036       S     TRUE     9.416469     2   0.9570016        1
+#> 1:   1.285714       S     TRUE     8.963206     2   0.8790423        1
+#> 2:   1.285714       S     TRUE     3.914026     0   0.9165339        1
+#> 3:   1.285714       S     TRUE     8.320474     2   0.8790423        1
+#> 4:   1.285714       S     TRUE     4.546957     1   0.9087506        1
+#> 5:   1.285714       S     TRUE     2.000000     0   0.9165339        1
+#> 6:   1.285714       S     TRUE    18.801937     4   0.8732138        1
 ```
 
 Reconstruct bootstrapped trees (per Hampson et al. 2009) & prune any
@@ -214,7 +222,7 @@ system.time({
                    seed = 105)
 })
 #>    user  system elapsed 
-#>   2.956   0.411   3.850
+#>   5.165   0.214   6.493
 ```
 
 ## Visualizing trees
@@ -305,82 +313,5 @@ We can also vizualize the consensus tree (i.e. tree which includes the
 highest % of consensus links):
 
 ``` r
-tree_consensus <- build_consensus_tree(links_consensus, ttrees)
+tree_consensus <- build_consensus_tree(links_consensus, ttrees, links_all)
 ```
-
-# Customize it
-
-Writing your own si and distance distribution functions:
-
-``` r
-# customizing params 
-```
-
-Let’s pretend that we actually know some of these case pairs from
-contact tracing data and reconstruct only unknown links:
-
-``` r
-# using known traced data
-```
-
-## Some preliminary work re: estimating detection probabilities
-
-Cori et al. 2019 use analytic expectations of temporal, spatial, genetic
-distances between case pairs given a detection probability.
-
-Working backwards from there, if we can link case pairs to get the
-distribution of distances (genetic \| spatial \| temporal) between case
-pairs, can we compare this to the analytical expectations to estimate
-detection probabilities?
-
-Right now, only one that really works in temporal:
-
-``` r
-# Line list full | 85% | 50% | 20% data & estimate detection 
-```
-
-Also the genetic data:
-
-``` r
-# Simplified assignment of lineages & snps 
-
-# Current circulating lineages to sample from
-
-# Plus probability of novel lineage being introduced into the Serengeti
-
-# snp distribution between lineages
-
-# mutation rate within lineages (assume that between lineage snp + within lineage snps are additive?) 
-
-# Line list with 25% | 10% | 5% data & estimate detection 
-```
-
-And this is using known case links, so really the *perfect* data,
-i.e. if it doesn’t work in this context, it’s unlikely to work in real
-data world. The real test here would be to simulat with known10.714
-detection probability, reconstruct transmission tree, and then try to
-recover the detection probability.
-
-## Known limitations & future directions
-
--   Speeding up / more efficient parallelization
-    -   right now it’s too mem heavy to use a cluster size larger than 3
-        cores!
-    -   part to parallelize = the data.table joins? or the distance and
-        si functions?
-    -   make sure to manage data.table threads explicitly through
-        setDTthreads
--   Better incorporating uncertainty in contact tracing data to avoid
-    creating loops & getting reasonable dates?
--   Incorporating uncertainty into location data?
--   Using N data streams with N uncertainties & N cutoffs/prob
-    distributions
--   Using genetic data (SNPs between cases per Cori \| Lineage
-    assignemnts)
--   Using partial data (i.e. incorporating genetic data when it is
-    available)
--   Use simulations to validate the detection estimates
-    -   Get the distance \| empirical bits working in the detection est
-    -   Simulate from simrabid + reconstruct bootstrapped trees +
-        estimate detection for each tree & compare to known estimate
-    -   Combining data streams in this context?

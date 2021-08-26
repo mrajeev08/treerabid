@@ -15,10 +15,18 @@ knitr::opts_chunk$set(
 
 # treerabid
 
-*This is a work in progress that will break | change | may get rehomed!*
-
 `treerabid` reconstructs transmission trees using line list data--specifically in the 
 context of contact tracing data for canine rabies in Tanzania for the Hampson Lab. 
+
+It is still in active development and may get rehomed in the future. Before using, we highly recommend submitting an issue to this repository. 
+
+For the package used in Mancy et al/Lushasi et al.:
+[![DOI](https://zenodo.org/badge/361056754.svg)](https://zenodo.org/badge/latestdoi/361056754)
+
+Or install version 1.0 from github:
+```
+devtools::install_github("mrajeev08/treerabid@v1.0", dependencies = TRUE)
+```
 
 Based on:
 - [Hampson et al. 2009. Transmission Dynamics and Prospects for the Elimination of Canine Rabies.](https://journals.plos.org/plosbiology/article?id=10.1371/journal.pbio.1000053)
@@ -31,7 +39,7 @@ Install from github with:
 
 ``` r
 # install.packages("devtools")
-devtools::install_github("mrajeev08/treerabid")
+devtools::install_github("mrajeev08/treerabid", dependencies = TRUE)
 ```
 
 Dependencies: `data.table`, `foreach`, `doRNG`, `parallel`
@@ -270,73 +278,6 @@ ggplot(chain_stats) +
 We can also vizualize the consensus tree (i.e. tree which includes the highest % of consensus links):
 
 ```{r}
-tree_consensus <- build_consensus_tree(links_consensus, ttrees)
+tree_consensus <- build_consensus_tree(links_consensus, ttrees, links_all)
 ```
 
-# Customize it
-
-Writing your own si and distance distribution functions:
-```{r}
-# customizing params 
-```
-
-
-Let's pretend that we actually know some of these case pairs from contact tracing data and reconstruct only unknown links:
-
-```{r known}
-# using known traced data
-```
-
-## Some preliminary work re: estimating detection probabilities
-
-Cori et al. 2019 use analytic expectations of temporal, spatial, genetic distances
-between case pairs given a detection probability. 
-
-Working backwards from there, if we can link case pairs to get the 
-distribution of distances (genetic | spatial | temporal) between case pairs, can we compare this to the analytical expectations to estimate detection probabilities?
-
-Right now, only one that really works in temporal:
-
-```{r }
-
-# Line list full | 85% | 50% | 20% data & estimate detection 
-
-```
-
-Also the genetic data:
-
-```{r detection}
-
-# Simplified assignment of lineages & snps 
-
-# Current circulating lineages to sample from
-
-# Plus probability of novel lineage being introduced into the Serengeti
-
-# snp distribution between lineages
-
-# mutation rate within lineages (assume that between lineage snp + within lineage snps are additive?) 
-
-# Line list with 25% | 10% | 5% data & estimate detection 
-
-```
-
-And this is using known case links, so really the *perfect* data, i.e. if it doesn't work in this context, it's unlikely to work in real data world. The real test here would be to simulat with known10.714 detection probability, reconstruct transmission tree, and then try to recover the detection probability. 
-
-## Known limitations & future directions
-
-- Speeding up / more efficient parallelization
-    - right now it's too mem heavy to use a cluster size larger than 3 cores! 
-    - part to parallelize = the data.table joins? or the distance and si functions?
-    - make sure to manage data.table threads explicitly through setDTthreads
-- Better incorporating uncertainty in contact tracing data to avoid creating loops
-  & getting reasonable dates?
-- Incorporating uncertainty into location data?
-- Using N data streams with N uncertainties & N cutoffs/prob distributions
-- Using genetic data (SNPs between cases per Cori | Lineage assignemnts)
-- Using partial data (i.e. incorporating genetic data when it is available)
-- Use simulations to validate the detection estimates
-    - Get the distance | empirical bits working in the detection est
-    - Simulate from simrabid + reconstruct bootstrapped trees + 
-      estimate detection for each tree & compare to known estimate
-    - Combining data streams in this context?
