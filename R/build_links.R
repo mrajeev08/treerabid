@@ -52,12 +52,12 @@ build_consensus_links <- function(links_all,
 
   # Get the consensus links
   links_consensus <- links_all[links_all[, .I[which.max(links)], by = c("id_case")]$V1] # returns first max
-  links_to_add <- !(case_dates$id_case %in% links_consensus$id_case)
-
-  if(length(links_to_add > 0)) {
-    links_to_add <- links_backup[id_case %in% links_to_add] # only one per case with na progen
-    links_consensus <- rbind(links_consensus, links_to_add)
-  }
+  links_to_add <- case_dates$id_case[!(case_dates$id_case %in% links_consensus$id_case)]
+    
+   if (length(links_to_add) > 0) {
+      links_to_add <- links_backup[id_case %in% links_to_add]
+      links_consensus <- rbind(links_consensus, links_to_add)
+   }
 
   if(is.null(lineages)) {
     lineages <- data.table(id_case = links_consensus$id_case, lineage = 0)
