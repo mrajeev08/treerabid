@@ -284,9 +284,16 @@ select_progenitor <- function(tree, lineages, k_tree, incursions,
 
         # if none then set to NA (prob & links)
         incs <- ifelse(nrow(fixed_links) == 0, lins_to_fix[i], 0)
-        set_incs <- ttree[id_case %in% incs][, c("id_biter", "id_case", "x_coord",
-                                                 "y_coord", "owned", "t", "type",
-                                                 "lineage")]
+        if("id_biter" %in% names(ttree)){
+          set_incs <- ttree[id_case %in% incs][, c("id_biter", "id_case", "x_coord",
+                                                   "y_coord", "owned", "t", "type",
+                                                   "lineage")]
+        } else {
+          set_incs <- ttree[id_case %in% incs][, c("id_case", "x_coord",
+                                                   "y_coord", "owned", "t", "type",
+                                                   "lineage")]
+        }
+
         set_incs[, id_progen := NA]
 
         # bind them together
