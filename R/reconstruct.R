@@ -345,9 +345,9 @@ add_uncertainty <- function(uncertainty, date_symptoms, id_biter,
 
   if(any(uncertainty > 0)) {
 
-    days_offset <- unlist(lapply(uncertainty, sample, size = 1))
-    sign <- sample(c(-1, 1), length(uncertainty), replace = TRUE)
-    date_uncertain <- date_symptoms +  days_offset * sign
+    days_offset <- unlist(lapply(uncertainty,
+                                 function(x){sample(seq(-x,x), size = 1)}))
+    date_uncertain <- date_symptoms +  days_offset
     niter <- 0
 
     if(use_known_source) {
