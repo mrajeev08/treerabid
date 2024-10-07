@@ -1,6 +1,6 @@
 Package: treerabid
 Title: Reconstruct Rabies Transmission Trees
-Version: 0.0.1.0000
+Version: 1.0.1.0000
 Authors@R: 
     person(given = "Malavika",
            family = "Rajeev",

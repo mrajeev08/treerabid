@@ -1,0 +1,8 @@
+bibentry(
+  bibtype  = "Manual",
+  title    = "treerabid: Reconstruct Rabies Transmission Trees",
+  author   = "Malavika Rajeev",
+  year     = "2024",
+  note     = "R package version 1.0.1",
+  url      = "https://github.com/mrajeev08/treerabid/"
+)
